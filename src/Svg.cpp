@@ -323,13 +323,16 @@ static Shape PathElementToShape(QDomElement &elt)
             QPointF newPos(x, y);
             if (is_relative)
                 newPos += oldPos;
-            const Point p1(oldPos.x(), oldPos.y());
-            const Point p2(x, y);
-            const Line line(p1, p2);
-            const Point center(CircleCenterFromChordAndRadius(p1, p2, crx, sweepFlag != largeArc));
-            const Segment::Orientation orientation = !sweepFlag ? Segment::Clockwise : Segment::CounterClockwise;
-            shape.boundary.segments.push_back(Segment(line, center, orientation));
-            oldPos = newPos;
+            if (newPos != oldPos)
+            {
+                const Point p1(oldPos.x(), oldPos.y());
+                const Point p2(x, y);
+                const Line line(p1, p2);
+                const Point center(CircleCenterFromChordAndRadius(p1, p2, crx, sweepFlag != largeArc));
+                const Segment::Orientation orientation = !sweepFlag ? Segment::Clockwise : Segment::CounterClockwise;
+                shape.boundary.segments.push_back(Segment(line, center, orientation));
+                oldPos = newPos;
+            }
         }
         else if (command == "L")
         {
@@ -338,9 +341,12 @@ static Shape PathElementToShape(QDomElement &elt)
             QPointF newPos(x, y);
             if (is_relative)
                 newPos += oldPos;
-            const Line line(Point(oldPos.x(), oldPos.y()), Point(x, y));
-            shape.boundary.segments.push_back(Segment(line));
-            oldPos = newPos;
+            if (newPos != oldPos)
+            {
+                const Line line(Point(oldPos.x(), oldPos.y()), Point(x, y));
+                shape.boundary.segments.push_back(Segment(line));
+                oldPos = newPos;
+            }
         }
         else if (command == "Z" || command == "z")
         {
