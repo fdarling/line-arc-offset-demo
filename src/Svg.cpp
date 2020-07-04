@@ -66,6 +66,9 @@ LineArcGeometry::MultiShape SVG_Load(const QString &filePath)
             // problem is differentiating outer and inner contours
             multiShape.shapes.push_back(PathElementToShape(elt));
         }
+        else if (tag == "style")
+        {
+        }
         else
         {
             qDebug() << ("WARNING: importing an SVG <" + tag + "> is unimplemented!");
@@ -341,9 +344,12 @@ static Shape PathElementToShape(QDomElement &elt)
         }
         else if (command == "Z" || command == "z")
         {
-            const Line line(Point(oldPos.x(), oldPos.y()), Point(firstPos.x(), firstPos.y()));
-            shape.boundary.segments.push_back(Segment(line));
-            oldPos = firstPos; // TODO is this what the spec says?
+            if (oldPos != firstPos)
+            {
+                const Line line(Point(oldPos.x(), oldPos.y()), Point(firstPos.x(), firstPos.y()));
+                shape.boundary.segments.push_back(Segment(line));
+                oldPos = firstPos; // TODO is this what the spec says?
+            }
         }
     }
     return shape;
