@@ -1,6 +1,8 @@
 #include "GeometryCGAL.h"
 #include "../GeometryQt.h"
 
+// #include <CGAL/Boolean_set_operations_2/Gps_polygon_validation.h> // for has_valid_orientation_polygon()
+
 namespace LineArcOffsetDemo {
 
 Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour)
@@ -39,10 +41,14 @@ Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour)
         }
         else // it's a line
         {
-            Point_2 pt1(it->line.p1.x, it->line.p1.y);
-            Point_2 pt2(it->line.p2.x, it->line.p2.y);
-            Curve_2 curve(pt1, pt2);
-            traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
+            // NOTE: CGAL doesn't like zero-length lines!
+            if (it->line.p1 != it->line.p2)
+            {
+                Point_2 pt1(it->line.p1.x, it->line.p1.y);
+                Point_2 pt2(it->line.p2.x, it->line.p2.y);
+                Curve_2 curve(pt1, pt2);
+                traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
+            }
         }
         // Construct the polygon.
         X_monotone_curve_2 arc;
@@ -52,6 +58,12 @@ Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour)
             CGAL::assign(arc, *iter);
             result.push_back(arc);
         }
+    }
+    // if (!has_valid_orientation_polygon(result, traits))
+    // if (result.orientation() == CGAL::CLOCKWISE)
+    if (result.orientation() == CGAL::NEGATIVE)
+    {
+        result.reverse_orientation();
     }
     return result;
 }
