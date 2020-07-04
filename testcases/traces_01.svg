@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns="http://www.w3.org/2000/svg"
+   width="2in"
+   height="2in"
+   viewBox="-1 -1 2 2">
+  <line x1=" 0.0" y1=" 0.0" x2=" 0.5" y2=" 0.0" fill="none" stroke="black" stroke-width="0.050" stroke-linecap="round" />
+  <line x1=" 0.5" y1=" 0.0" x2=" 0.5" y2=" 0.5" fill="none" stroke="black" stroke-width="0.040" stroke-linecap="round" />
+  <line x1=" 0.5" y1=" 0.5" x2=" 0.0" y2=" 0.5" fill="none" stroke="black" stroke-width="0.030" stroke-linecap="round" />
+  <line x1=" 0.0" y1=" 0.5" x2=" 0.0" y2=" 0.0" fill="none" stroke="black" stroke-width="0.020" stroke-linecap="round" />
+  <line x1="-0.1" y1=" 0.0" x2="-0.1" y2=" 0.5" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
+  <line x1=" 0.1" y1=" 0.1" x2=" 0.4" y2=" 0.4" fill="none" stroke="black" stroke-width="0.030" stroke-linecap="round" />
+  <rect x="0.3" y="0.1" width="0.1" height="0.1" fill="black" stroke="none" />
+  <circle cx="0.1" cy="0.3" r="0.05" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
+</svg>
