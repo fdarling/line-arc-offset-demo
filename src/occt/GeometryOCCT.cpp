@@ -40,14 +40,6 @@ static QDebug operator<<(QDebug debug, const gp_Pnt &pt)
     return debug;
 }
 
-/*static QDebug operator<<(QDebug debug, const LineArcGeometry::Point &pt)
-{
-    QDebugStateSaver saver(debug);
-    // debug.nospace() << "Point(" << pt.x << ", " << pt.y << ")";
-    debug.nospace() << "Point(" << (qFuzzyIsNull(pt.x) ? 0.0 : pt.x) << ", " << (qFuzzyIsNull(pt.y) ? 0.0 : pt.y) << ")";
-    return debug;
-}*/
-
 QT_END_NAMESPACE
 
 namespace LineArcOffsetDemo {
@@ -282,6 +274,7 @@ static LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
 
 static LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
 {
+    // qDebug() << "TopoDS_FaceToShape";
     LineArcGeometry::Shape result;
     // idea to determine the outer boundary taken from
     // https://www.opencascade.com/content/how-get-external-and-internal-boundary-holes-edges-mesh-face
@@ -297,10 +290,14 @@ static LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
         if (area > largestArea)
         {
             // save what we thought was the boundary as a hole
-            result.holes.push_back(result.boundary);
+            if (largestArea != -1.0)
+            {
+                result.holes.push_back(result.boundary);
+            }
 
             // update the boundary with the newly found largest contour
             result.boundary = contour;
+            largestArea = area;
         }
         else
         {
