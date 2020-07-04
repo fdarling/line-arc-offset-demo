@@ -15,6 +15,17 @@ The relevant development packages to install on Ubuntu 18.04 are:
 * qt5-default
 * libcgal-dev
 
+## Configuring
+
+You will want to edit the `linearoffsetdemo.pro` file and choose which goemetry backends to use by commenting or uncommenting the appropriate lines. It is fine to have multiple engines enabled at the same time. This example shows using OCCT but not CGAL:
+
+```
+# GEOMETRY_ENGINES += cgal
+GEOMETRY_ENGINES += occt
+```
+
+You may also need to modify the `LIBS` and `QXX_CFLAGS` for CGAL and OCCT depending on your platform.
+
 ## Compiling
 
 On Linux, run the following commands in the top-level directory with the `linearcoffsetdemo.pro` file:
