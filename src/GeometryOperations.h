@@ -9,9 +9,9 @@ class GeometryOperations
 {
 public:
     virtual LineArcGeometry::MultiShape join(const LineArcGeometry::MultiShape &multiShape) = 0;
-    // virtual MultiShape intersection(const MultiShape &a, const MultiShape &b) = 0;
-    // virtual MultiShape difference(const MultiShape &a, const MultiShape &b) = 0;
-    // virtual MultiShape offset(const MultiShape &multiShape) = 0;
+    virtual LineArcGeometry::MultiShape intersection(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b) = 0;
+    virtual LineArcGeometry::MultiShape difference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b) = 0;
+    // virtual LineArcGeometry::MultiShape offset(const LineArcGeometry::MultiShape &multiShape) = 0;
 };
 
 } // namespace LineArcOffsetDemo
