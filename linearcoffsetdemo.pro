@@ -5,8 +5,8 @@ QT += widgets xml
 # CONFIG += precompile_header
 # PRECOMPILED_HEADER = src/cgal/CGALWrapper.h
 
-# GEOMETRY_ENGINES = cgal
-GEOMETRY_ENGINES = occt
+# GEOMETRY_ENGINES += cgal
+GEOMETRY_ENGINES += occt
 
 contains(GEOMETRY_ENGINES, cgal) {
 	HEADERS += \
