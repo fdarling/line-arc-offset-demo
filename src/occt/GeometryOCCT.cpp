@@ -12,10 +12,10 @@
 #include <TopoDS_Wire.hxx>
 #include <TopoDS_Vertex.hxx>
 #include <TopoDS_Face.hxx>
-#include <TopoDS_Compound.hxx> // TODO remove?
-#include <TopoDS_Builder.hxx> // TODO remove?
+#include <TopoDS_Compound.hxx>
+#include <TopoDS_Builder.hxx>
 #include <BRep_Tool.hxx>
-#include <BRepAlgoAPI_Fuse.hxx> // TODO remove?
+#include <BRepBndLib.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
@@ -283,16 +283,28 @@ static LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
 static LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
 {
     LineArcGeometry::Shape result;
+    // idea to determine the outer boundary taken from
+    // https://www.opencascade.com/content/how-get-external-and-internal-boundary-holes-edges-mesh-face
+    double largestArea = -1.0;
     for (TopExp_Explorer wire_it(face, TopAbs_WIRE); wire_it.More(); wire_it.Next())
     {
         const TopoDS_Wire wire = TopoDS::Wire(wire_it.Current());
         const LineArcGeometry::Contour contour = TopoDS_WireToContour(wire);
-        if (result.boundary.segments.empty())
+
+        Bnd_Box box;
+        BRepBndLib::Add(wire, box);
+        const double area = box.SquareExtent();
+        if (area > largestArea)
         {
+            // save what we thought was the boundary as a hole
+            result.holes.push_back(result.boundary);
+
+            // update the boundary with the newly found largest contour
             result.boundary = contour;
         }
         else
         {
+            // we definitely have a hole since it's smaller than something we've seen before
             result.holes.push_back(contour);
         }
     }
