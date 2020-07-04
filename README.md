@@ -10,10 +10,16 @@ It currently has two backends: CGAL (used by OpenSCAD) and Open CASCADE Technolo
 * [CGAL](https://www.cgal.org/) 4.11.2 (older versions may work too)
 * [Open CASCADE Technology](https://www.opencascade.com/content/latest-release) 7.4.0 (older versions may work too, not sure about the "Community Edition"...)
 
-The relevant development packages to install on Ubuntu 18.04 are:
+The relevant development packages to install on Ubuntu 18.04 (bionic) are:
 
 * qt5-default
 * libcgal-dev
+
+For Debian 9 (stretch) and likely Ubuntu 18.04 (bionic), the following dependencies need to be installed to build Open CACADE 7.4.0:
+
+```
+sudo apt-get install tk-dev libxmu-dev libxi-dev
+```
 
 ## Configuring
 
