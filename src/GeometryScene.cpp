@@ -95,12 +95,13 @@ GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
         AddMultiShapeToScene(this, overlappingShapes);
         SVG_Save("testcases/output.svg", overlappingShapes);
     }
-#ifdef USING_CGAL
+#if defined(USING_CGAL)
     GeometryOperationsCGAL ops;
-#endif // USING_CGAL
-#ifdef USING_OCCT
+#elif defined(USING_OCCT)
     GeometryOperationsOCCT ops;
-#endif // USING_OCCT
+#else // !defined(USING_CGAL) && !defined(USING_OCCT)
+#error "Currently the program only supports one backend (CGAL or OCCT) at a time, in the future it will be more flexible"
+#endif // defined(USING_CGAL)
     if (testType == TEST_IDENTITY)
     {
         // test if geometry survives converting back and forth from the engine's internal format
