@@ -10,6 +10,7 @@ class GeometryScene : public QGraphicsScene
     Q_OBJECT
 public:
     GeometryScene(QObject *parent = nullptr);
+    void runTests();
 };
 
 } // namespace LineArcOffsetDemo

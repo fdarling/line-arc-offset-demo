@@ -24,8 +24,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _geomView(new Geo
 
     _settings = new QSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
     _loadSettings();
-    
+
     connect(_geomView, SIGNAL(pointHovered(const QPointF &)), this, SLOT(slot_CoordinateHovered(const QPointF &)));
+
+    _geomScene->runTests();
 }
 
 MainWindow::~MainWindow()

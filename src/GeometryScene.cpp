@@ -11,6 +11,8 @@
 #endif // USING_OCCT
 #include "Svg.h"
 
+#include <QProgressDialog>
+#include <QElapsedTimer>
 #include <QDebug>
 
 namespace LineArcOffsetDemo {
@@ -60,7 +62,7 @@ static void AddShapeToScene(QGraphicsScene *scene, const LineArcGeometry::Shape 
     {
         AddContourToPath(path, *it);
     }
-    scene->addPath(path, QPen(color, 0.0)); // TODO allow color to be specified
+    scene->addPath(path, QPen(color, 0.0));
 }
 
 static void AddMultiShapeToScene(QGraphicsScene *scene, const LineArcGeometry::MultiShape &multiShape, const QColor &color = Qt::black)
@@ -73,6 +75,10 @@ static void AddMultiShapeToScene(QGraphicsScene *scene, const LineArcGeometry::M
 
 GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
 {
+}
+
+void GeometryScene::runTests()
+{
     const LineArcGeometry::MultiShape overlappingShapes = SVG_Load("testcases/traces_01.svg");
     enum TestType
     {
@@ -81,14 +87,16 @@ GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
         TEST_UNARY_UNION,
         TEST_UNION,
         TEST_INTERSECTION,
-        TEST_DIFFERENCE
+        TEST_DIFFERENCE,
+        TEST_OFFSET
     } testType;
     // testType = TEST_RAW;
     // testType = TEST_IDENTITY;
-    testType = TEST_UNARY_UNION;
+    // testType = TEST_UNARY_UNION;
     // testType = TEST_UNION;
     // testType = TEST_INTERSECTION;
     // testType = TEST_DIFFERENCE;
+    testType = TEST_OFFSET;
     if (testType == TEST_RAW)
     {
         // display the raw geometry imported from the SVG (before any operations are run on it)
@@ -143,6 +151,33 @@ GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
         const LineArcGeometry::MultiShape diffed = ops.difference(joined, cutter);
         AddMultiShapeToScene(this, diffed);
         SVG_Save("testcases/output.svg", diffed);
+    }
+    else if (testType == TEST_OFFSET)
+    {
+        // show the original geometry
+        AddMultiShapeToScene(this, joined);
+
+        const double radii[] = {0.010, 0.020, 0.030, 0.040, 0.050, 0.060, 0.070, 0.080, 0.090, 0.100, 0.110, 0.120, 0.130, 0.140, 0.150, 0.160, 0.170};
+        // const double radii[] = {0.011};
+        // const double radii[] = {0.005};
+        const size_t NUM_RADII = sizeof(radii)/sizeof(radii[0]);
+        QProgressDialog progress("Generating offsets...", "Stop", 0, NUM_RADII/*, this*/);
+        progress.setWindowModality(Qt::WindowModal);
+        QElapsedTimer timer;
+        progress.setValue(0);
+        for (size_t i = 0; i < NUM_RADII; i++)
+        {
+            if (progress.wasCanceled())
+                break;
+            const double radius = radii[i];
+            qDebug() << "Generating offset polygon" << (i+1) << "of" << NUM_RADII << "(" << radius << ")...";
+            timer.start();
+            const LineArcGeometry::MultiShape offset_shapes = ops.offset(joined, radius);
+            qDebug() << "...took" << (timer.nsecsElapsed()/1.0e9) << "seconds";
+            AddMultiShapeToScene(this, offset_shapes, Qt::green);
+            // SVG_Save("testcases/output.svg", offset_shapes);
+            progress.setValue(i+1);
+        }
     }
 }
 
