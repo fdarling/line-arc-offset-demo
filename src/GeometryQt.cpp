@@ -15,7 +15,7 @@ QDebug operator<<(QDebug debug, const LineArcGeometry::Point &pt)
 QDebug operator<<(QDebug debug, const LineArcGeometry::Line &line)
 {
     QDebugStateSaver saver(debug);
-    debug.nospace() << "Line("<< line.p1 << line.p2 << ")";
+    debug.nospace() << "Line("<< line.p1 << ", " << line.p2 << ")";
     return debug;
 }
 

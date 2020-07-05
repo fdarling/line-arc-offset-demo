@@ -46,6 +46,17 @@ LineArcGeometry::MultiShape GeometryOperationsCGAL::join(const LineArcGeometry::
     return PolygonWithHolesListToMultiShape(joined);
 }
 
+LineArcGeometry::MultiShape GeometryOperationsCGAL::join(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
+{
+    std::list<Polygon_with_holes_2> joined;
+    {
+        const std::list<Polygon_with_holes_2> aa(MultiShapeToPolygonWithHolesList(a));
+        const std::list<Polygon_with_holes_2> bb(MultiShapeToPolygonWithHolesList(b));
+        CGAL::join(aa.begin(), aa.end(), bb.begin(), bb.end(), std::back_inserter(joined));
+    }
+    return PolygonWithHolesListToMultiShape(joined);
+}
+
 LineArcGeometry::MultiShape GeometryOperationsCGAL::intersection(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     const std::list<Polygon_with_holes_2> aa = MultiShapeToPolygonWithHolesList(a);

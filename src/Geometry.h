@@ -140,6 +140,7 @@ public:
         Segment result(line.reversed(), center, (orientation == Clockwise) ? CounterClockwise : Clockwise, isArc);
         return result;
     }
+    CoordinateType radius() const;
     Point midPoint() const;
     Line line;
     Point center;
@@ -178,6 +179,8 @@ public:
         }
         return result;
     }
+    Segment::Orientation orientation() const;
+    bool isValid() const;
     std::list<Segment> segments;
 };
 

@@ -154,11 +154,14 @@ static TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
 
 TopoDS_Face ShapeToTopoDS_Face(const LineArcGeometry::Shape &shape)
 {
-    // qDebug() << "ShapeToTopoDS_Face";
-    BRepBuilderAPI_MakeFace builder(gp_Pln(), ContourToTopoDS_Wire(shape.boundary), true);
+    // qDebug() << "ShapeToTopoDS_Face" << shape.boundary;
+    const LineArcGeometry::Contour fixed_boundary = shape.boundary.orientation() == LineArcGeometry::Segment::Clockwise ? shape.boundary.reversed() : shape.boundary;
+    TopoDS_Wire boundary = ContourToTopoDS_Wire(fixed_boundary);
+    BRepBuilderAPI_MakeFace builder(gp_Pln(), boundary, true);
     for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
     {
-        builder.Add(ContourToTopoDS_Wire(hole_it->reversed())); // TODO does reversed() even help?
+        const LineArcGeometry::Contour fixed_hole = hole_it->orientation() != LineArcGeometry::Segment::Clockwise ? hole_it->reversed() : *hole_it;
+        builder.Add(ContourToTopoDS_Wire(fixed_hole));
     }
     if (!builder.IsDone())
     {
@@ -207,7 +210,11 @@ static LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
         curve->D0(t_start, p1);
         curve->D0((t_end - t_start)/2.0, p3);
         curve->D0(t_end, p2);
-        // const bool isReversed = edge.Orientation() == TopAbs_REVERSED;
+        /*const bool isReversed = edge.Orientation() == TopAbs_REVERSED;
+        if (isReversed)
+        {
+            std::swap(p1, p2);
+        }*/
 
         const LineArcGeometry::Line line(gp_PntToPoint(p1), gp_PntToPoint(p2));
         if(curve->DynamicType() == STANDARD_TYPE(Geom_Line))
@@ -268,6 +275,10 @@ static LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
             qDebug() << "ERROR: unsupported Geom_Curve type:" << curve->DynamicType()->Name();
             return LineArcGeometry::Contour();
         }
+    }
+    if (!result.isValid())
+    {
+        qDebug() << "ERROR: generated invalid Contour from TopoDS_Wire!" << result;
     }
     return result;
 }

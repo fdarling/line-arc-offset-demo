@@ -132,6 +132,10 @@ LineArcGeometry::Contour PolygonToContour(const Polygon_2 &polygon)
             result.segments.push_back(LineArcGeometry::Line(p1, p2));
         }
     }
+    if (!result.isValid())
+    {
+        qDebug() << "ERROR: generated invalid Contour from Polygon_2!" << result;
+    }
     return result;
 }
 
