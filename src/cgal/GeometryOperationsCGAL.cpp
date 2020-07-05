@@ -36,6 +36,13 @@ static std::list<Polygon_with_holes_2> intersectPolygonLists(const std::list<Pol
     return result;
 }
 
+LineArcGeometry::MultiShape GeometryOperationsCGAL::identity(const LineArcGeometry::MultiShape &multiShape)
+{
+    const std::list<Polygon_with_holes_2> polygons = MultiShapeToPolygonWithHolesList(multiShape);
+    const LineArcGeometry::MultiShape reconverted = PolygonWithHolesListToMultiShape(polygons);
+    return reconverted;
+}
+
 LineArcGeometry::MultiShape GeometryOperationsCGAL::join(const LineArcGeometry::MultiShape &multiShape)
 {
     std::list<Polygon_with_holes_2> joined;

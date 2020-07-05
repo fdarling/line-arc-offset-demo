@@ -8,6 +8,7 @@ namespace LineArcOffsetDemo {
 class GeometryOperations
 {
 public:
+    virtual LineArcGeometry::MultiShape identity(const LineArcGeometry::MultiShape &multiShape) = 0;
     virtual LineArcGeometry::MultiShape join(const LineArcGeometry::MultiShape &multiShape) = 0;
     virtual LineArcGeometry::MultiShape intersection(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b) = 0;
     virtual LineArcGeometry::MultiShape difference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b) = 0;

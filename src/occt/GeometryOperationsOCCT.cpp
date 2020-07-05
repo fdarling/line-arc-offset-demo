@@ -15,6 +15,13 @@
 
 namespace LineArcOffsetDemo {
 
+LineArcGeometry::MultiShape GeometryOperationsOCCT::identity(const LineArcGeometry::MultiShape &multiShape)
+{
+    const TopoDS_Face face = MultiShapeToTopoDS_Face(multiShape);
+    const LineArcGeometry::MultiShape reconverted = TopoDS_ShapeToMultiShape(face);
+    return reconverted;
+}
+
 LineArcGeometry::MultiShape GeometryOperationsOCCT::join(const LineArcGeometry::MultiShape &multiShape)
 {
     // qDebug() << "GeometryOperationsOCCT::join()";

@@ -3,6 +3,7 @@
 #ifdef USING_CGAL
 #include "cgal/GeometryOperationsCGAL.h"
 // #include "cgal/GeometryCGAL.h" // WARNING: pulling in CGAL headers will slow down compilation significantly
+// #include "cgal/CGALWrapper.h" // WARNING: pulling in CGAL headers will slow down compilation significantly
 #endif // USING_CGAL
 #ifdef USING_OCCT
 #include "occt/GeometryOperationsOCCT.h"
@@ -72,38 +73,76 @@ static void AddMultiShapeToScene(QGraphicsScene *scene, const LineArcGeometry::M
 
 GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
 {
-    LineArcGeometry::MultiShape multiShape = SVG_Load("testcases/traces_01.svg");
-    // display the raw geometry imported from the SVG (before any operations are run on it)
-    // AddMultiShapeToScene(this, multiShape);
-    // SVG_Save("testcases/output.svg", multiShape);
+    const LineArcGeometry::MultiShape overlappingShapes = SVG_Load("testcases/traces_01.svg");
+    enum TestType
+    {
+        TEST_RAW,
+        TEST_IDENTITY,
+        TEST_UNARY_UNION,
+        TEST_UNION,
+        TEST_INTERSECTION,
+        TEST_DIFFERENCE
+    } testType;
+    // testType = TEST_RAW;
+    // testType = TEST_IDENTITY;
+    testType = TEST_UNARY_UNION;
+    // testType = TEST_UNION;
+    // testType = TEST_INTERSECTION;
+    // testType = TEST_DIFFERENCE;
+    if (testType == TEST_RAW)
+    {
+        // display the raw geometry imported from the SVG (before any operations are run on it)
+        AddMultiShapeToScene(this, overlappingShapes);
+        SVG_Save("testcases/output.svg", overlappingShapes);
+    }
 #ifdef USING_CGAL
-    {
-        // test if geometry survives converting back and forth from CGAL data structures
-        // const LineArcGeometry::MultiShape reconverted = PolygonWithHolesListToMultiShape(MultiShapeToPolygonWithHolesList(multiShape));
-        // AddMultiShapeToScene(this, reconverted);
-        // SVG_Save("testcases/output.svg", reconverted);
-    }
-    {
-        // test CGAL implemented union boolean operation
-        LineArcGeometry::MultiShape joined = GeometryOperationsCGAL().join(multiShape);
-        AddMultiShapeToScene(this, joined);
-        SVG_Save("testcases/output.svg", joined);
-    }
+    GeometryOperationsCGAL ops;
 #endif // USING_CGAL
 #ifdef USING_OCCT
+    GeometryOperationsOCCT ops;
+#endif // USING_OCCT
+    if (testType == TEST_IDENTITY)
     {
-        // test if geometry survives converting back and forth from OCCT data structures
-        // const LineArcGeometry::MultiShape reconverted = TopoDS_ShapeToMultiShape(MultiShapeToTopoDS_Face(multiShape));
-        // AddMultiShapeToScene(this, reconverted);
-        // SVG_Save("testcases/output.svg", reconverted);
+        // test if geometry survives converting back and forth from the engine's internal format
+        const LineArcGeometry::MultiShape reconverted = ops.identity(overlappingShapes);
+        AddMultiShapeToScene(this, reconverted);
+        SVG_Save("testcases/output.svg", reconverted);
     }
+    // combine the overlapping contents of the test case file using union
+    const LineArcGeometry::MultiShape joined = ops.join(overlappingShapes);
+    if (testType == TEST_UNARY_UNION)
     {
-        // test OCCT implemented union boolean operation
-        LineArcGeometry::MultiShape joined = GeometryOperationsOCCT().join(multiShape);
         AddMultiShapeToScene(this, joined);
         SVG_Save("testcases/output.svg", joined);
     }
-#endif // USING_OCCT
+    else if (testType == TEST_UNION)
+    {
+        // further test union
+        const LineArcGeometry::MultiShape addend = SVG_Load("testcases/traces_02.svg");
+        // AddMultiShapeToScene(this, addend);
+        const LineArcGeometry::MultiShape sum = ops.join(joined, addend);
+        AddMultiShapeToScene(this, sum);
+        SVG_Save("testcases/output.svg", sum);
+    }
+    else if (testType == TEST_INTERSECTION)
+    {
+        // test intersection
+        const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
+        // AddMultiShapeToScene(this, cutter);
+        const LineArcGeometry::MultiShape intersection = ops.intersection(joined, cutter);
+        AddMultiShapeToScene(this, intersection);
+        SVG_Save("testcases/output.svg", intersection);
+    }
+    else if (testType == TEST_DIFFERENCE)
+    {
+        // test difference
+        // const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/thermal.svg");
+        const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
+        // AddMultiShapeToScene(this, cutter);
+        const LineArcGeometry::MultiShape diffed = ops.difference(joined, cutter);
+        AddMultiShapeToScene(this, diffed);
+        SVG_Save("testcases/output.svg", diffed);
+    }
 }
 
 } // namespace LineArcOffsetDemo
