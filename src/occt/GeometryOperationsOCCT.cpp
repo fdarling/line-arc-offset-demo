@@ -6,7 +6,12 @@
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
+#include <BRepOffsetAPI_MakeOffset.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
+
+#include <BRepBuilderAPI_MakeWire.hxx>
+#include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepBuilderAPI_MakeEdge.hxx>
 
 #include <QDebug>
 
@@ -151,7 +156,7 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::intersection(const LineArcGe
     for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = a.shapes.begin(); shape_it != a.shapes.end(); ++shape_it)
     {
         const TopoDS_Face aa = ShapeToTopoDS_Face(*shape_it);
-        
+
         BRepAlgoAPI_Common common(aa, bb);
         common.SetRunParallel(true);
         common.SetFuzzyValue(1.e-5);
@@ -239,7 +244,7 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::difference(const LineArcGeom
         // const TopoDS_Face minuend    = ShapeToTopoDS_Face(LineArcGeometry::Shape(shape_it->boundary));
         const TopoDS_Face minuend    = ShapeToTopoDS_Face(*shape_it);
         // qDebug() << "...done constructing minuend!";
-        
+
         BRepAlgoAPI_Cut cutter(minuend, subtrahend);
         cutter.SetRunParallel(true);
         cutter.SetFuzzyValue(1.e-5);
@@ -316,11 +321,44 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::difference(const LineArcGeom
 #endif
 }
 
-LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry::MultiShape &a, double radius)
+LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
 {
-    // TODO this is a stub
-    Q_UNUSED(radius);
-    return identity(a);
+    // qDebug() << "GeometryOperationsOCCT::offset()";
+    BRepOffsetAPI_MakeOffset off;
+    for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = multiShape.shapes.begin(); shape_it != multiShape.shapes.end(); ++shape_it)
+    {
+        const LineArcGeometry::Shape &shape = *shape_it;
+        qDebug() << shape;
+
+        // add boundary
+        const LineArcGeometry::Contour fixed_boundary = (shape.boundary.orientation() == LineArcGeometry::Segment::Clockwise) ? shape.boundary.reversed() : shape.boundary;
+        off.AddWire(ContourToTopoDS_Wire(fixed_boundary));
+
+        // add holes
+        for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
+        {
+            const LineArcGeometry::Contour fixed_hole = (hole_it->orientation() != LineArcGeometry::Segment::Clockwise) ? hole_it->reversed() : *hole_it;
+            off.AddWire(ContourToTopoDS_Wire(fixed_hole));
+        }
+    }
+    off.Init(GeomAbs_Arc);
+    off.Perform(radius);
+
+    if (!off.IsDone())
+    {
+        qDebug() << "ERROR: BRepOffsetAPI_MakeOffset::IsDone() is false!";
+    }
+    const TopoDS_Shape& r = off.Shape();
+    if (r.IsNull())
+    {
+        qDebug() << "WARNING: TopoDS_Shape::IsNull() is true (might be okay)";
+    }
+    // return TopoDS_ShapeToMultiShape(r, false);
+
+    ShapeUpgrade_UnifySameDomain su(r);
+    su.Build();
+    const TopoDS_Shape result = su.Shape();
+    return TopoDS_ShapeToMultiShape(result, false);
 }
 
 } // namespace LineArcOffsetDemo

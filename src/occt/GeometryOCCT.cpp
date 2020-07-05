@@ -9,7 +9,6 @@
 #include <TopExp_Explorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
-#include <TopoDS_Wire.hxx>
 #include <TopoDS_Vertex.hxx>
 #include <TopoDS_Face.hxx>
 #include <TopoDS_Compound.hxx>
@@ -55,7 +54,7 @@ static bool FuzzyCompare_gp_Pnt(const gp_Pnt &a, const gp_Pnt &b)
     return FuzzyCompareWithNull(a.X(), b.X()) && FuzzyCompareWithNull(a.Y(), b.Y());
 }
 
-static TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
+TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
 {
     // qDebug() << "ContourToTopoDS_Wire";
     BRepBuilderAPI_MakeWire wire_builder;
@@ -194,7 +193,7 @@ LineArcGeometry::Point gp_PntToPoint(const gp_Pnt &pt)
     return LineArcGeometry::Point(pt.X(), pt.Y());
 }
 
-static LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
+LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
 {
     LineArcGeometry::Contour result;
     // TODO is there a difference between TopExp_Explorer::Current() and TopExp_Explorer::Value()?
@@ -283,7 +282,7 @@ static LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
     return result;
 }
 
-static LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
+LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
 {
     // qDebug() << "TopoDS_FaceToShape";
     LineArcGeometry::Shape result;
@@ -319,9 +318,19 @@ static LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
     return result;
 }
 
-LineArcGeometry::MultiShape TopoDS_ShapeToMultiShape(const TopoDS_Shape &shape)
+LineArcGeometry::MultiShape TopoDS_ShapeToMultiShape(const TopoDS_Shape &shape, bool useFaces)
 {
     LineArcGeometry::MultiShape result;
+    if (!useFaces)
+    {
+        for (TopExp_Explorer wire_it(shape, TopAbs_WIRE); wire_it.More(); wire_it.Next())
+        {
+            const TopoDS_Wire wire = TopoDS::Wire(wire_it.Current());
+            const LineArcGeometry::Contour contour = TopoDS_WireToContour(wire);
+            result.shapes.push_back(LineArcGeometry::Shape(contour));
+        }
+        return result;
+    }
     for (TopExp_Explorer face_it(shape, TopAbs_FACE); face_it.More(); face_it.Next())
     {
         const TopoDS_Face face = TopoDS::Face(face_it.Current());
