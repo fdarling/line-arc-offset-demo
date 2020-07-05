@@ -86,7 +86,15 @@ static Point_2 Point_2_from_QPointF(const QPointF &pt)
 template <typename T>
 std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double radius_cap)
 {
-    if (curve.is_circular())
+    const QPointF pt1(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
+    const QPointF pt2(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
+    if (qFuzzyIsNull(QLineF(pt1, pt2).length()))
+    {
+        std::list<Polygon_with_holes_2> res;
+        res.push_back(Polygon_with_holes_2(construct_circle_polygon(pt1, radius_cap)));
+        return res;
+    }
+    else if (curve.is_circular())
     {
         const Circle_2 circle = curve.supporting_circle();
         if constexpr (std::is_same<T, Curve_2>::value)
@@ -252,8 +260,6 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
     }
     else // if (curve.is_linear())
     {
-        const QPointF pt1(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
-        const QPointF pt2(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
         std::list<Polygon_with_holes_2> res;
         res.push_back(Polygon_with_holes_2(construct_wire(pt1, pt2, radius_cap*2.0)));
         return res;

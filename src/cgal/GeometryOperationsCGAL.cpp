@@ -80,4 +80,11 @@ LineArcGeometry::MultiShape GeometryOperationsCGAL::difference(const LineArcGeom
     return PolygonWithHolesListToMultiShape(difference);
 }
 
+LineArcGeometry::MultiShape GeometryOperationsCGAL::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
+{
+    const std::list<Polygon_with_holes_2> polygons = MultiShapeToPolygonWithHolesList(multiShape);
+    std::list<Polygon_with_holes_2> offset_polygons = construct_polygon_list_offset(polygons, radius);
+    return PolygonWithHolesListToMultiShape(offset_polygons);
+}
+
 } // namespace LineArcOffsetDemo

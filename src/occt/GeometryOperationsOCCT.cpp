@@ -316,4 +316,11 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::difference(const LineArcGeom
 #endif
 }
 
+LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry::MultiShape &a, double radius)
+{
+    // TODO this is a stub
+    Q_UNUSED(radius);
+    return identity(a);
+}
+
 } // namespace LineArcOffsetDemo
