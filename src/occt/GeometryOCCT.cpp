@@ -66,9 +66,9 @@ TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
             // TODO handle "full" circles which means the start/end points are coincident, currently LineArcGeometry::Segment isn't well defined for this though...
             // qDebug() << "ContourToTopoDS_Wire: center" << it->center.x << "," << it->center.y << " --- from" << it->line.p1.x << "," << it->line.p1.y << "to" << it->line.p2.x << "," << it->line.p2.y << "ORIENT:" << it->orientation;
             const LineArcGeometry::Point midPoint = it->midPoint();
-            const gp_Pnt p1(it->line.p1.x, it->line.p1.y, 0);
-            const gp_Pnt p2(it->line.p2.x, it->line.p2.y, 0);
-            const gp_Pnt p3(midPoint.x, midPoint.y, 0);
+            const gp_Pnt p1 = PointTogp_Pnt(it->line.p1);
+            const gp_Pnt p2 = PointTogp_Pnt(it->line.p2);
+            const gp_Pnt p3 = PointTogp_Pnt(midPoint);
             const Handle(Geom_TrimmedCurve) arc = GC_MakeArcOfCircle(p1, p3, p2);
             BRepBuilderAPI_MakeEdge edge_builder(arc);
             if (!edge_builder.IsDone())
@@ -114,8 +114,8 @@ TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
         }
         else
         {
-            TopoDS_Vertex p1(BRepBuilderAPI_MakeVertex(gp_Pnt(it->line.p1.x, it->line.p1.y, 0)));
-            TopoDS_Vertex p2(BRepBuilderAPI_MakeVertex(gp_Pnt(it->line.p2.x, it->line.p2.y, 0)));
+            TopoDS_Vertex p1(BRepBuilderAPI_MakeVertex(PointTogp_Pnt(it->line.p1)));
+            TopoDS_Vertex p2(BRepBuilderAPI_MakeVertex(PointTogp_Pnt(it->line.p2)));
             BRepBuilderAPI_MakeEdge edge_builder(p1, p2);
             if (!edge_builder.IsDone())
             {
@@ -153,13 +153,15 @@ TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
 
 TopoDS_Face ShapeToTopoDS_Face(const LineArcGeometry::Shape &shape)
 {
-    // qDebug() << "ShapeToTopoDS_Face" << shape.boundary;
-    const LineArcGeometry::Contour fixed_boundary = shape.boundary.orientation() == LineArcGeometry::Segment::Clockwise ? shape.boundary.reversed() : shape.boundary;
+    // qDebug() << "ShapeToTopoDS_Face";
+    const bool boundary_needs_reversal = (shape.boundary.orientation() == LineArcGeometry::Segment::Clockwise);
+    const LineArcGeometry::Contour fixed_boundary = boundary_needs_reversal ? shape.boundary.reversed() : shape.boundary;
     TopoDS_Wire boundary = ContourToTopoDS_Wire(fixed_boundary);
     BRepBuilderAPI_MakeFace builder(gp_Pln(), boundary, true);
     for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
     {
-        const LineArcGeometry::Contour fixed_hole = hole_it->orientation() != LineArcGeometry::Segment::Clockwise ? hole_it->reversed() : *hole_it;
+        const bool hole_needs_reversal = (hole_it->orientation() != LineArcGeometry::Segment::Clockwise);
+        const LineArcGeometry::Contour fixed_hole = hole_needs_reversal ? hole_it->reversed() : *hole_it;
         builder.Add(ContourToTopoDS_Wire(fixed_hole));
     }
     if (!builder.IsDone())
@@ -195,6 +197,7 @@ LineArcGeometry::Point gp_PntToPoint(const gp_Pnt &pt)
 
 LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
 {
+    // qDebug() << "TopoDS_WireToContour";
     LineArcGeometry::Contour result;
     // TODO is there a difference between TopExp_Explorer::Current() and TopExp_Explorer::Value()?
     for (TopExp_Explorer edge_it(wire, TopAbs_EDGE); edge_it.More(); edge_it.Next())

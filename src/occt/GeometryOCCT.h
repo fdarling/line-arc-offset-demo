@@ -10,6 +10,10 @@
 
 namespace LineArcOffsetDemo {
 
+inline gp_Pnt PointTogp_Pnt(const LineArcGeometry::Point &pt)
+{
+    return gp_Pnt(pt.x, pt.y, 0.0);
+}
 TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour);
 TopoDS_Face ShapeToTopoDS_Face(const LineArcGeometry::Shape &shape);
 TopoDS_Face MultiShapeToTopoDS_Face(const LineArcGeometry::MultiShape &multiShape);
