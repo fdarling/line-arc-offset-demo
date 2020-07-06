@@ -45,7 +45,7 @@ make
 
 ## Running
 
-On Linux, you can launch the built `Servoterm` executable that will be put in the same directory as the `servoterm.pro` file:
+On Linux, you can launch the built `LineArcOffsetDemo` executable that will be put in the same directory as the `linearcoffsetdemo.pro` file:
 
 ```
 ./LineArcOffsetDemo
