@@ -47,7 +47,7 @@ Segment::Orientation Contour::orientation() const
         const QLineF a = LineToQLineF(prev->line);
         const QLineF b = LineToQLineF(it->line);
         double angle = a.angleTo(b);
-        if (angle == 180.0)
+        if (qFuzzyCompare(angle, 180.0))
         {
             if (it->isArc)
             {
