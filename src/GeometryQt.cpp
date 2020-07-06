@@ -22,7 +22,15 @@ QDebug operator<<(QDebug debug, const LineArcGeometry::Line &line)
 QDebug operator<<(QDebug debug, const LineArcGeometry::Segment &segment)
 {
     QDebugStateSaver saver(debug);
-    debug.nospace() << "Segment("<< segment.line << ")"; // TODO dump other properties
+    debug.nospace();
+    if (segment.isArc)
+    {
+        debug << "Segment<Arc>(" << segment.line << ", center = " << segment.center << ", midPoint = " << segment.midPoint() << ", " << ((segment.orientation == LineArcGeometry::Segment::Clockwise) ? "CW" : "CCW") << ")";
+    }
+    else
+    {
+        debug << "Segment<Line>(" << segment.line << ")";
+    }
     return debug;
 }
 
