@@ -4,6 +4,13 @@ A demo program written with C++/Qt to show offsetting of shapes comprised of lin
 
 It currently has two backends: CGAL (used by OpenSCAD) and Open CASCADE Technology (used by FreeCAD).
 
+## Screenshots
+
+[![offset shapes](https://i.imgur.com/bPJmiXwm.png "offset shapes")](https://i.imgur.com/bPJmiXw.png)
+
+[![combined shapes](https://i.imgur.com/dlGJi19m.png "combined shapes")](https://i.imgur.com/dlGJi19.png)
+[![overlapping shapes](https://i.imgur.com/t0Ig0Jzm.png "overlapping shapes")](https://i.imgur.com/t0Ig0Jz.png)
+
 ## Dependencies
 
 * [Qt](https://www.qt.io/) 5 (widgets and xml modules)
