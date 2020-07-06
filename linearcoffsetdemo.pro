@@ -48,6 +48,7 @@ contains(GEOMETRY_ENGINES, occt) {
 		-lTKService \
 		-lTKTopAlgo \
 		-lTKSTL \
+		-lTKIGES \
 		-lTKHLR \
 		-lTKernel \
 		-lTKG2d \

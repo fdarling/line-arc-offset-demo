@@ -13,6 +13,8 @@
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
 
+#include <IGESControl_Writer.hxx>
+
 #include <QDebug>
 
 // https://www.opencascade.com/content/remove-seams-after-fuse
@@ -328,7 +330,6 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry
     for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = multiShape.shapes.begin(); shape_it != multiShape.shapes.end(); ++shape_it)
     {
         const LineArcGeometry::Shape &shape = *shape_it;
-        qDebug() << shape;
 
         // add boundary
         const LineArcGeometry::Contour fixed_boundary = (shape.boundary.orientation() == LineArcGeometry::Segment::Clockwise) ? shape.boundary.reversed() : shape.boundary;
@@ -358,6 +359,18 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry
     ShapeUpgrade_UnifySameDomain su(r);
     su.Build();
     const TopoDS_Shape result = su.Shape();
+    
+    if (0)
+    {
+        qDebug() << "Exporting IGES...";
+        IGESControl_Writer writer;
+        writer.AddShape(result);
+        std::ofstream outfile("testcases/output.igs", std::ofstream::out);
+        writer.Write(outfile);
+        outfile.close();
+    }
+    
+    // qDebug() << "Converting offset results...";
     return TopoDS_ShapeToMultiShape(result, false);
 }
 
