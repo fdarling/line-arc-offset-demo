@@ -102,6 +102,7 @@ void GeometryScene::runTests()
         // display the raw geometry imported from the SVG (before any operations are run on it)
         AddMultiShapeToScene(this, overlappingShapes);
         SVG_Save("testcases/output.svg", overlappingShapes);
+        return;
     }
 #if defined(USING_CGAL)
     GeometryOperationsCGAL ops;
@@ -116,6 +117,7 @@ void GeometryScene::runTests()
         const LineArcGeometry::MultiShape reconverted = ops.identity(overlappingShapes);
         AddMultiShapeToScene(this, reconverted);
         SVG_Save("testcases/output.svg", reconverted);
+        return;
     }
     // combine the overlapping contents of the test case file using union
     const LineArcGeometry::MultiShape joined = ops.join(overlappingShapes);
@@ -157,9 +159,11 @@ void GeometryScene::runTests()
         // show the original geometry
         AddMultiShapeToScene(this, joined);
 
+        // const double radii[] = {0.010, 0.020, 0.030, 0.040};
         const double radii[] = {0.010, 0.020, 0.030, 0.040, 0.050, 0.060, 0.070, 0.080, 0.090, 0.100, 0.110, 0.120, 0.130, 0.140, 0.150, 0.160, 0.170};
         // const double radii[] = {0.011};
         // const double radii[] = {0.005};
+        // const double radii[] = {0.020};
         const size_t NUM_RADII = sizeof(radii)/sizeof(radii[0]);
         QProgressDialog progress("Generating offsets...", "Stop", 0, NUM_RADII/*, this*/);
         progress.setWindowModality(Qt::WindowModal);
