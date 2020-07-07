@@ -22,11 +22,60 @@
 
 namespace LineArcOffsetDemo {
 
+static void IGES_Save(const char *filePath, const TopoDS_Shape &shape)
+{
+    IGESControl_Writer writer;
+    writer.AddShape(shape);
+    std::ofstream outfile(filePath, std::ofstream::out);
+    writer.Write(outfile);
+    outfile.close();
+}
+
 LineArcGeometry::MultiShape GeometryOperationsOCCT::identity(const LineArcGeometry::MultiShape &multiShape)
 {
     const TopoDS_Face face = MultiShapeToTopoDS_Face(multiShape);
     const LineArcGeometry::MultiShape reconverted = TopoDS_ShapeToMultiShape(face);
     return reconverted;
+}
+
+template <typename BooleanOperationClass>
+static TopoDS_Shape DoBoolean(const TopoDS_Shape &shapeA, const TopoDS_Shape &shapeB)
+{
+    BooleanOperationClass fuser(shapeA, shapeB);
+    fuser.SetRunParallel(true);
+    fuser.SetFuzzyValue(1.e-5);
+    fuser.SetNonDestructive(true);
+    fuser.SetGlue(BOPAlgo_GlueShift);
+    fuser.SetCheckInverted(true);
+
+    fuser.Build();
+
+    if (fuser.HasErrors())
+    {
+        qDebug() << "BRepAlgoAPI_Fuse::HasErrors()";
+        fuser.GetReport()->Dump(std::cout);
+        return TopoDS_Shape();
+    }
+
+    if (fuser.HasWarnings())
+    {
+        qDebug() << "BRepAlgoAPI_Fuse::HasWarnings()";
+        fuser.GetReport()->Dump(std::cout);
+    }
+
+    // clean up output
+    const TopoDS_Shape &r = fuser.Shape();
+    ShapeUpgrade_UnifySameDomain su(r);
+    su.Build();
+    return su.Shape();
+}
+
+static void FuseShapeInto(TopoDS_Shape &result, const TopoDS_Shape &shape)
+{
+    if (result.IsNull())
+        result = shape;
+    else
+        result = DoBoolean<BRepAlgoAPI_Fuse>(result, shape);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::join(const LineArcGeometry::MultiShape &multiShape)
@@ -35,292 +84,58 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::join(const LineArcGeometry::
     TopoDS_Shape result;
     for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
     {
-        if (it == multiShape.shapes.begin())
-        {
-            result = ShapeToTopoDS_Face(*it);
-            continue;
-        }
-        BRepAlgoAPI_Fuse fuser(result, ShapeToTopoDS_Face(*it));
-        fuser.SetRunParallel(true);
-        fuser.SetFuzzyValue(1.e-5);
-        fuser.SetNonDestructive(true);
-        fuser.SetGlue(BOPAlgo_GlueShift);
-        fuser.SetCheckInverted(true);
-
-        fuser.Build();
-
-        if (fuser.HasErrors())
-        {
-            qDebug() << "BRepAlgoAPI_Fuse::HasErrors()";
-            fuser.GetReport()->Dump(std::cout);
-            return LineArcGeometry::MultiShape();
-        }
-
-        if (fuser.HasWarnings())
-        {
-            qDebug() << "BRepAlgoAPI_Fuse::HasWarnings()";
-            fuser.GetReport()->Dump(std::cout);
-        }
-
-        // clean up output
-        const TopoDS_Shape &r = fuser.Shape();
-        ShapeUpgrade_UnifySameDomain su(r);
-        su.Build();
-        result = su.Shape();
+        FuseShapeInto(result, ShapeToTopoDS_Face(*it));
     }
-
+    if (0)
+    {
+        qDebug() << "Exporting join() result to IGES...";
+        IGES_Save("testcases/output.igs", result);
+    }
     return TopoDS_ShapeToMultiShape(result);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::join(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     // qDebug() << "GeometryOperationsOCCT::join()";
-    TopoDS_Shape result;
-    for (std::list<LineArcGeometry::Shape>::const_iterator it = a.shapes.begin(); it != a.shapes.end(); ++it)
+    const TopoDS_Face aa = MultiShapeToTopoDS_Face(a);
+    const TopoDS_Face bb = MultiShapeToTopoDS_Face(b);
+    const TopoDS_Shape result = DoBoolean<BRepAlgoAPI_Fuse>(aa, bb);
+    if (0)
     {
-        if (it == a.shapes.begin())
-        {
-            result = ShapeToTopoDS_Face(*it);
-            continue;
-        }
-        BRepAlgoAPI_Fuse fuser(result, ShapeToTopoDS_Face(*it));
-        fuser.SetRunParallel(true);
-        fuser.SetFuzzyValue(1.e-5);
-        fuser.SetNonDestructive(true);
-        fuser.SetGlue(BOPAlgo_GlueShift);
-        fuser.SetCheckInverted(true);
-
-        fuser.Build();
-
-        if (fuser.HasErrors())
-        {
-            qDebug() << "BRepAlgoAPI_Fuse::HasErrors()";
-            fuser.GetReport()->Dump(std::cout);
-            return LineArcGeometry::MultiShape();
-        }
-
-        if (fuser.HasWarnings())
-        {
-            qDebug() << "BRepAlgoAPI_Fuse::HasWarnings()";
-            fuser.GetReport()->Dump(std::cout);
-        }
-
-        // clean up output
-        const TopoDS_Shape &r = fuser.Shape();
-        ShapeUpgrade_UnifySameDomain su(r);
-        su.Build();
-        result = su.Shape();
+        qDebug() << "Exporting join() result to IGES...";
+        IGES_Save("testcases/output.igs", result);
     }
-    for (std::list<LineArcGeometry::Shape>::const_iterator it = b.shapes.begin(); it != b.shapes.end(); ++it)
-    {
-        if (it == a.shapes.begin())
-        {
-            result = ShapeToTopoDS_Face(*it);
-            continue;
-        }
-        BRepAlgoAPI_Fuse fuser(result, ShapeToTopoDS_Face(*it));
-        fuser.SetRunParallel(true);
-        fuser.SetFuzzyValue(1.e-5);
-        fuser.SetNonDestructive(true);
-        fuser.SetGlue(BOPAlgo_GlueShift);
-        fuser.SetCheckInverted(true);
-
-        fuser.Build();
-
-        if (fuser.HasErrors())
-        {
-            qDebug() << "BRepAlgoAPI_Fuse::HasErrors()";
-            fuser.GetReport()->Dump(std::cout);
-            return LineArcGeometry::MultiShape();
-        }
-
-        if (fuser.HasWarnings())
-        {
-            qDebug() << "BRepAlgoAPI_Fuse::HasWarnings()";
-            fuser.GetReport()->Dump(std::cout);
-        }
-
-        // clean up output
-        const TopoDS_Shape &r = fuser.Shape();
-        ShapeUpgrade_UnifySameDomain su(r);
-        su.Build();
-        result = su.Shape();
-    }
-
     return TopoDS_ShapeToMultiShape(result);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::intersection(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
-#if 1
-    const TopoDS_Face bb = MultiShapeToTopoDS_Face(b);
-    LineArcGeometry::MultiShape result;
-    for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = a.shapes.begin(); shape_it != a.shapes.end(); ++shape_it)
-    {
-        const TopoDS_Face aa = ShapeToTopoDS_Face(*shape_it);
-
-        BRepAlgoAPI_Common common(aa, bb);
-        common.SetRunParallel(true);
-        common.SetFuzzyValue(1.e-5);
-        common.SetNonDestructive(true);
-        common.SetGlue(BOPAlgo_GlueShift);
-        common.SetCheckInverted(true);
-
-        common.Build();
-
-        if (common.HasErrors())
-        {
-            qDebug() << "BRepAlgoAPI_Common::HasErrors()";
-            common.GetReport()->Dump(std::cout);
-            return LineArcGeometry::MultiShape();
-        }
-
-        if (common.HasWarnings())
-        {
-            qDebug() << "BRepAlgoAPI_Common::HasWarnings()";
-            common.GetReport()->Dump(std::cout);
-        }
-
-        // clean up output
-        const TopoDS_Shape &r = common.Shape();
-        ShapeUpgrade_UnifySameDomain su(r);
-        su.Build();
-        const TopoDS_Shape diff = su.Shape();
-        qDebug() << "...converting results to MultiShape...";
-        const LineArcGeometry::MultiShape difference = TopoDS_ShapeToMultiShape(diff);
-        for (std::list<LineArcGeometry::Shape>::const_iterator it = a.shapes.begin(); it != a.shapes.end(); ++it)
-        {
-            result.shapes.push_back(*it);
-        }
-    }
-    // qDebug() << "...returning MultiShape!";
-    return result;
-#else
     // qDebug() << "GeometryOperationsOCCT::intersection()";
     const TopoDS_Face aa = MultiShapeToTopoDS_Face(a);
     const TopoDS_Face bb = MultiShapeToTopoDS_Face(b);
-
-    BRepAlgoAPI_Common common(aa, bb);
-    common.SetRunParallel(true);
-    common.SetFuzzyValue(1.e-5);
-    common.SetNonDestructive(true);
-    common.SetGlue(BOPAlgo_GlueShift);
-    common.SetCheckInverted(true);
-
-    common.Build();
-
-    if (common.HasErrors())
+    const TopoDS_Shape result = DoBoolean<BRepAlgoAPI_Common>(aa, bb);
+    if (0)
     {
-        qDebug() << "BRepAlgoAPI_Common::HasErrors()";
-        common.GetReport()->Dump(std::cout);
-        return LineArcGeometry::MultiShape();
+        qDebug() << "Exporting intersection() result to IGES...";
+        IGES_Save("testcases/output.igs", result);
     }
-
-    if (common.HasWarnings())
-    {
-        qDebug() << "BRepAlgoAPI_Common::HasWarnings()";
-        common.GetReport()->Dump(std::cout);
-    }
-
-    // clean up output
-    const TopoDS_Shape &r = common.Shape();
-    ShapeUpgrade_UnifySameDomain su(r);
-    su.Build();
-    const TopoDS_Shape result = su.Shape();
     // qDebug() << "...converting results to MultiShape...";
     return TopoDS_ShapeToMultiShape(result);
-#endif
 }
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::difference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
-#if 1
     // qDebug() << "GeometryOperationsOCCT::difference()";
-    const TopoDS_Face subtrahend = MultiShapeToTopoDS_Face(b);
-    // const TopoDS_Face subtrahend = ShapeToTopoDS_Face(b.shapes.front());
-    LineArcGeometry::MultiShape result;
-    for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = a.shapes.begin(); shape_it != a.shapes.end(); ++shape_it)
+    const TopoDS_Face aa = MultiShapeToTopoDS_Face(a);
+    const TopoDS_Face bb = MultiShapeToTopoDS_Face(b);
+    const TopoDS_Shape result = DoBoolean<BRepAlgoAPI_Cut>(aa, bb);
+    if (0)
     {
-        // qDebug() << "constructing minuend...";
-        // qDebug() << "minuend:" << LineArcGeometry::Shape(shape_it->boundary);
-        // const TopoDS_Face minuend    = ShapeToTopoDS_Face(LineArcGeometry::Shape(shape_it->boundary));
-        const TopoDS_Face minuend    = ShapeToTopoDS_Face(*shape_it);
-        // qDebug() << "...done constructing minuend!";
-
-        BRepAlgoAPI_Cut cutter(minuend, subtrahend);
-        cutter.SetRunParallel(true);
-        cutter.SetFuzzyValue(1.e-5);
-        cutter.SetNonDestructive(true);
-        cutter.SetGlue(BOPAlgo_GlueShift);
-        cutter.SetCheckInverted(true);
-
-        cutter.Build();
-
-        if (cutter.HasErrors())
-        {
-            qDebug() << "BRepAlgoAPI_Cut::HasErrors()";
-            cutter.GetReport()->Dump(std::cout);
-            return LineArcGeometry::MultiShape();
-        }
-
-        if (cutter.HasWarnings())
-        {
-            qDebug() << "BRepAlgoAPI_Cut::HasWarnings()";
-            cutter.GetReport()->Dump(std::cout);
-        }
-
-        // clean up output
-        const TopoDS_Shape &r = cutter.Shape();
-        ShapeUpgrade_UnifySameDomain su(r);
-        su.Build();
-        const TopoDS_Shape diff = su.Shape();
-        // qDebug() << "...converting results to MultiShape...";
-        const LineArcGeometry::MultiShape difference = TopoDS_ShapeToMultiShape(diff);
-        for (std::list<LineArcGeometry::Shape>::const_iterator it = a.shapes.begin(); it != a.shapes.end(); ++it)
-        {
-            result.shapes.push_back(*it);
-        }
+        qDebug() << "Exporting difference() result to IGES...";
+        IGES_Save("testcases/output.igs", result);
     }
-    // qDebug() << "...returning MultiShape!";
-    return result;
-#else
-    // qDebug() << "GeometryOperationsOCCT::difference()";
-    // qDebug() << "constructing minuend...";
-    const TopoDS_Face minuend    = MultiShapeToTopoDS_Face(a);
-    // qDebug() << "constructing subtrahend...";
-    const TopoDS_Face subtrahend = MultiShapeToTopoDS_Face(b);
-    // qDebug() << "...minuend and subtrahend constructed!";
-
-    BRepAlgoAPI_Cut cutter(minuend, subtrahend);
-    cutter.SetRunParallel(true);
-    cutter.SetFuzzyValue(1.e-5);
-    cutter.SetNonDestructive(true);
-    cutter.SetGlue(BOPAlgo_GlueShift);
-    cutter.SetCheckInverted(true);
-
-    cutter.Build();
-
-    if (cutter.HasErrors())
-    {
-        qDebug() << "BRepAlgoAPI_Cut::HasErrors()";
-        // cutter.GetReport()->Dump(std::cout);
-        return LineArcGeometry::MultiShape();
-    }
-
-    if (cutter.HasWarnings())
-    {
-        qDebug() << "BRepAlgoAPI_Cut::HasWarnings()";
-        // cutter.GetReport()->Dump(std::cout);
-    }
-
-    // clean up output
-    const TopoDS_Shape &r = cutter.Shape();
-    ShapeUpgrade_UnifySameDomain su(r);
-    su.Build();
-    const TopoDS_Shape result = su.Shape();
     // qDebug() << "...converting results to MultiShape...";
     return TopoDS_ShapeToMultiShape(result);
-#endif
 }
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
@@ -363,11 +178,7 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry
     if (0)
     {
         qDebug() << "Exporting IGES...";
-        IGESControl_Writer writer;
-        writer.AddShape(result);
-        std::ofstream outfile("testcases/output.igs", std::ofstream::out);
-        writer.Write(outfile);
-        outfile.close();
+        IGES_Save("testcases/output.igs", result);
     }
     
     // qDebug() << "Converting offset results...";
