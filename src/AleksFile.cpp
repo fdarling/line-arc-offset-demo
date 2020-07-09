@@ -13,16 +13,6 @@ using namespace LineArcGeometry;
 
 namespace LineArcOffsetDemo {
 
-static Segment::Orientation LinePointOrientation(const Line &line, const Point &pt)
-{
-    const CoordinateType ldx = line.p2.x - line.p1.x;
-    const CoordinateType ldy = line.p2.y - line.p1.y;
-    const CoordinateType pdx = pt.x - line.p1.x;
-    const CoordinateType pdy = pt.y - line.p1.y;
-    const CoordinateType det = pdx*ldy - pdy*ldx;
-    return det > 0.0 ? Segment::CounterClockwise : Segment::Clockwise;
-}
-
 static void ReadArc(Contour &contour, const Point &center, double radius, double angle1, double angle2, bool usingDegrees)
 {
     bool full_circle = false;
@@ -60,9 +50,6 @@ static void ReadArc(Contour &contour, const Point &center, double radius, double
         {
             mid_angle += M_PI;
         }
-        // qDebug() << "angle1" << angle1;
-        // qDebug() << "angle2" << angle2;
-        // qDebug() << "anglem" << mid_angle;
 
         p0.x += radius * cos(angle1);
         p0.y += radius * sin(angle1);
@@ -74,7 +61,7 @@ static void ReadArc(Contour &contour, const Point &center, double radius, double
         pm.y += radius * sin(mid_angle);
 
         const Line line(p0, p1);
-        contour.segments.push_back(Segment(line, center, LinePointOrientation(line, pm))); // TODO determine orientation
+        contour.segments.push_back(Segment(line, center, OrientationReversed(LinePointOrientation(line, pm))));
     }
     else
     {

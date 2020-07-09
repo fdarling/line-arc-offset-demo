@@ -219,6 +219,13 @@ public:
 
 Contour ContourFromLineAndRadius(const Line &line, double radius);
 
+Segment::Orientation LinePointOrientation(const Line &line, const Point &pt);
+
+inline Segment::Orientation OrientationReversed(Segment::Orientation orientation)
+{
+    return (orientation == Segment::Clockwise) ? Segment::CounterClockwise : Segment::Clockwise;
+}
+
 } // namespace LineArcGeometry
 
 #endif // LINEARCOFFSETDEMO_GEOMETRY_H
