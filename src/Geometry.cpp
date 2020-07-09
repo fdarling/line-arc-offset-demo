@@ -9,6 +9,11 @@
 
 namespace LineArcGeometry {
 
+CoordinateType Line::length() const
+{
+    return QLineF(PointToQPointF(p1), PointToQPointF(p2)).length();
+}
+
 CoordinateType Segment::radius() const
 {
     return QLineF(PointToQPointF(center), PointToQPointF(line.p2)).length();

@@ -104,6 +104,7 @@ public:
     {
         return Line(p2, p1);
     }
+    CoordinateType length() const;
     Point p1;
     Point p2;
 };
