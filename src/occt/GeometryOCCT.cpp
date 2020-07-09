@@ -206,65 +206,87 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
         const TopoDS_Edge edge = TopoDS::Edge(edge_it.Current());
 
         // get curve and it's start/end points
+        //TopLoc_Location L;
         Standard_Real t_start, t_end;
         const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, t_start, t_end);
-        gp_Pnt p1, p2, p3;
+        gp_Pnt p1, p2, pm;
         curve->D0(t_start, p1);
-        curve->D0((t_end - t_start)/2.0, p3);
+        curve->D0((t_start + t_end)/2.0, pm);
         curve->D0(t_end, p2);
-        /*const bool isReversed = edge.Orientation() == TopAbs_REVERSED;
+        //qDebug() << "WALKING:" << gp_PntToPoint(p1) << "->" << gp_PntToPoint(p2) << "thru" << gp_PntToPoint(p3) << "orient=" << edge.Orientation();
+#if 0
+        const gp_Trsf Tr = L.Transformation();
+        if (Tr.Form() != gp_Identity)
+        {
+            qDebug() << "TRANSFORMING";
+            curve = Handle(Geom_Curve)::DownCast(curve->Transformed(Tr));
+        }
+        else
+            curve = Handle(Geom_Curve)::DownCast(curve->Copy());
+        const bool isReversed = (edge.Orientation() == TopAbs_REVERSED);
         if (isReversed)
         {
-            std::swap(p1, p2);
-        }*/
-
-        const LineArcGeometry::Line line(gp_PntToPoint(p1), gp_PntToPoint(p2));
-        if(curve->DynamicType() == STANDARD_TYPE(Geom_Line))
-        {
-            result.segments.push_back(line);
+            qDebug() << "REVERSING";
+            const Standard_Real First = t_start;
+            const Standard_Real Last = t_end;
+            t_start = curve->ReversedParameter(Last);
+            t_end = curve->ReversedParameter(First);
+            curve->Reverse();
         }
-        else if(curve->DynamicType() == STANDARD_TYPE(Geom_Circle))
+#elif 0
+        const bool isReversed = (edge.Orientation() == TopAbs_REVERSED);
+        if (isReversed)
+        {
+            qDebug() << "$$$$$$$$$$$ REVERSING";
+            std::swap(p1, p2);
+        }
+#endif
+        const LineArcGeometry::Line line(LineArcGeometry::Point(p1.X(), p1.Y()), LineArcGeometry::Point(p2.X(), p2.Y()));
+        // qDebug() << "PROCESSING" << line << (curve->DynamicType() == STANDARD_TYPE(Geom_Line));
+        if (curve->DynamicType() == STANDARD_TYPE(Geom_Line))
+        {
+            result.segments.push_back(LineArcGeometry::Segment(line));
+        }
+        else if (curve->DynamicType() == STANDARD_TYPE(Geom_Circle))
         {
             const Handle(Geom_Circle) circle = Handle(Geom_Circle)::DownCast(curve);
-            const LineArcGeometry::Point center(gp_PntToPoint(circle->Circ().Location()));
+            const gp_Pnt cen = circle->Circ().Location();
+            const LineArcGeometry::Point center(cen.X(), cen.Y());
+            const LineArcGeometry::Point midPoint(pm.X(), pm.Y());
+            const LineArcGeometry::Segment::Orientation orientation = LineArcGeometry::OrientationReversed(LineArcGeometry::LinePointOrientation(line, midPoint));
+            result.segments.push_back(LineArcGeometry::Segment(line, center, orientation));
 
-            const QVector2D chordLineNormal(QLineF(QPointF(), QPointF(line.p2.x, line.p2.y) - QPointF(line.p1.x, line.p1.y)).normalVector().p2());
-            const QVector2D midptVec(QLineF(QPointF(), QPointF(p3.X(), p3.Y()) - QPointF(line.p1.x, line.p1.y)).p2());
-            const bool veersLeft = (QVector2D::dotProduct(chordLineNormal, midptVec) < 0.0);
-            LineArcGeometry::Segment::Orientation orientation = veersLeft ? LineArcGeometry::Segment::Clockwise : LineArcGeometry::Segment::CounterClockwise;
-            // LineArcGeometry::Segment::Orientation orientation = LineArcGeometry::Segment::Clockwise;
-            // LineArcGeometry::Segment::Orientation orientation = LineArcGeometry::Segment::CounterClockwise;
-            // qDebug() << "OUT: ARC center" << center << "from" << p1 << "to" << p2 << "through" << p3 << "Orientation():" << edge.Orientation() << "veersLeft" << veersLeft << "calc orientation" << orientation;
-            // check for "full circles"
-            if (line.p1 == line.p2)
-            {
-                // treat concident start/end points as full circles and not as zero length arcs
-                const LineArcGeometry::Point pa(line.p1);
-                const LineArcGeometry::Point pb(2*center - line.p1); // got the opposite side
-                const LineArcGeometry::Line l1(pa, pb);
-                const LineArcGeometry::Line l2(pb, pa);
-                result.segments.push_back(LineArcGeometry::Segment(l1, center, orientation));
-                result.segments.push_back(LineArcGeometry::Segment(l2, center, orientation));
-            }
-            else
-            {
-                result.segments.push_back(LineArcGeometry::Segment(line, center, orientation));
-            }
         }
         else if (curve->DynamicType() == STANDARD_TYPE(Geom_TrimmedCurve))
         {
-            const Handle(Geom_TrimmedCurve) trimmed = Handle(Geom_TrimmedCurve)::DownCast(curve);
+            Handle(Geom_TrimmedCurve) trimmed = Handle(Geom_TrimmedCurve)::DownCast(curve);
 
             if (trimmed->BasisCurve()->DynamicType() == STANDARD_TYPE(Geom_Line))
             {
-                result.segments.push_back(line);
+                result.segments.push_back(LineArcGeometry::Segment(line));
             }
             else if (trimmed->BasisCurve()->DynamicType() == STANDARD_TYPE(Geom_Circle))
             {
-                Handle(Geom_Circle) circle = Handle(Geom_Circle)::DownCast(trimmed->BasisCurve());
-                const LineArcGeometry::Point center(gp_PntToPoint(circle->Circ().Location()));
-                LineArcGeometry::Segment::Orientation orientation = edge.Orientation() ? LineArcGeometry::Segment::Clockwise : LineArcGeometry::Segment::CounterClockwise;
-                result.segments.push_back(LineArcGeometry::Segment(line, center, orientation));
+                const Handle(Geom_Circle) circle = Handle(Geom_Circle)::DownCast(trimmed->BasisCurve());
+                const gp_Pnt cen = circle->Circ().Location();
+                const LineArcGeometry::Point center(cen.X(), cen.Y());
+                const LineArcGeometry::Point midPoint(pm.X(), pm.Y());
+                const LineArcGeometry::Segment::Orientation orientation = LineArcGeometry::OrientationReversed(LineArcGeometry::LinePointOrientation(line, midPoint));
+                
+                if (line.p1 == line.p2)
+                {
+                    // treat concident start/end points as full circles and not as zero length arcs
+                    const LineArcGeometry::Point pa(line.p1);
+                    const LineArcGeometry::Point pb(2*center - line.p1); // got the opposite side
+                    const LineArcGeometry::Line l1(pa, pb);
+                    const LineArcGeometry::Line l2(pb, pa);
+                    result.segments.push_back(LineArcGeometry::Segment(l1, center, orientation));
+                    result.segments.push_back(LineArcGeometry::Segment(l2, center, orientation));
+                }
+                else
+                {
+                    result.segments.push_back(LineArcGeometry::Segment(line, center, orientation));
+                }
             }
             else
             {
