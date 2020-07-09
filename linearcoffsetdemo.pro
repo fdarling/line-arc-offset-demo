@@ -64,6 +64,7 @@ contains(GEOMETRY_ENGINES, occt) {
 TARGET = LineArcOffsetDemo
 
 HEADERS += \
+	src/AleksFile.h \
 	src/Svg.h \
 	src/Geometry.h \
 	src/GeometryOperations.h \
@@ -73,6 +74,7 @@ HEADERS += \
 	src/MainWindow.h
 
 SOURCES += \
+	src/AleksFile.cpp \
 	src/Svg.cpp \
 	src/Geometry.cpp \
 	src/GeometryOperations.cpp \
