@@ -242,6 +242,7 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
         }
 #endif
         const LineArcGeometry::Line line(LineArcGeometry::Point(p1.X(), p1.Y()), LineArcGeometry::Point(p2.X(), p2.Y()));
+        const bool zeroLengthLine = (line.p1 == line.p2); // (line.length() < 0.0001);
         // qDebug() << "PROCESSING" << line << (curve->DynamicType() == STANDARD_TYPE(Geom_Line));
         if (curve->DynamicType() == STANDARD_TYPE(Geom_Line))
         {
@@ -254,7 +255,20 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
             const LineArcGeometry::Point center(cen.X(), cen.Y());
             const LineArcGeometry::Point midPoint(pm.X(), pm.Y());
             const LineArcGeometry::Segment::Orientation orientation = LineArcGeometry::OrientationReversed(LineArcGeometry::LinePointOrientation(line, midPoint));
-            result.segments.push_back(LineArcGeometry::Segment(line, center, orientation));
+            if (zeroLengthLine)
+            {
+                // treat concident start/end points as full circles and not as zero length arcs
+                const LineArcGeometry::Point pa(line.p1);
+                const LineArcGeometry::Point pb(2*center - line.p1); // got the opposite side
+                const LineArcGeometry::Line l1(pa, pb);
+                const LineArcGeometry::Line l2(pb, pa);
+                result.segments.push_back(LineArcGeometry::Segment(l1, center, orientation));
+                result.segments.push_back(LineArcGeometry::Segment(l2, center, orientation));
+            }
+            else
+            {
+                result.segments.push_back(LineArcGeometry::Segment(line, center, orientation));
+            }
 
         }
         else if (curve->DynamicType() == STANDARD_TYPE(Geom_TrimmedCurve))
@@ -273,7 +287,7 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
                 const LineArcGeometry::Point midPoint(pm.X(), pm.Y());
                 const LineArcGeometry::Segment::Orientation orientation = LineArcGeometry::OrientationReversed(LineArcGeometry::LinePointOrientation(line, midPoint));
                 
-                if (line.p1 == line.p2)
+                if (zeroLengthLine)
                 {
                     // treat concident start/end points as full circles and not as zero length arcs
                     const LineArcGeometry::Point pa(line.p1);
