@@ -61,7 +61,7 @@ contains(GEOMETRY_ENGINES, occt) {
 		-std=c++1z
 	DEFINES += USING_OCCT
 }
-{
+contains(GEOMETRY_ENGINES, clipper) {
 	HEADERS += \
 		src/clipper/GeometryClipper.h \
 		src/clipper/GeometryOperationsClipper.h
