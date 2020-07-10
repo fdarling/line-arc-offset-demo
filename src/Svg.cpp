@@ -298,7 +298,7 @@ static Shape PathElementToShape(QDomElement &elt)
         QChar command;
         stream >> command;
         const bool is_relative = command.isLower();
-        if (command == "M")
+        if (command == 'M')
         {
             qreal x, y;
             stream >> x >> y;
@@ -310,7 +310,7 @@ static Shape PathElementToShape(QDomElement &elt)
             oldPos = newPos;
             firstPos = newPos;
         }
-        else if (command == "A")
+        else if (command == 'A')
         {
             qreal crx = 0.0, cry = 0.0, rot = 0.0, x = 0.0, y = 0.0;
             int largeArc = 0, sweepFlag = 0;
@@ -334,7 +334,7 @@ static Shape PathElementToShape(QDomElement &elt)
                 oldPos = newPos;
             }
         }
-        else if (command == "L")
+        else if (command == 'L')
         {
             qreal x, y;
             stream >> x >> y;
@@ -348,7 +348,7 @@ static Shape PathElementToShape(QDomElement &elt)
                 oldPos = newPos;
             }
         }
-        else if (command == "Z" || command == "z")
+        else if (command == 'Z' || command == 'z')
         {
             if (oldPos != firstPos)
             {
