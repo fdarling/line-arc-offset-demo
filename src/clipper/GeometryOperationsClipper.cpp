@@ -74,10 +74,15 @@ LineArcGeometry::MultiShape GeometryOperationsClipper::offset(const LineArcGeome
     }
     // qDebug() << "Converting offset results...";
     // return PolyTreeToMultiShape(solution);
-    // if (delta > 0)
+
+    // outset
+    if (delta > 0)
         return DoBoolean(PolyTreeToMultiShape(solution), multiShape, ClipperLib::ctUnion);
-    // delta < 0
-    // return DoBoolean(PolyTreeToMultiShape(solution), multiShape, ClipperLib::ctIntersection, ClipperLib::ptClip);
+
+    // inset
+    const LineArcGeometry::MultiShape insideHalf = DoBoolean(PolyTreeToMultiShape(solution), multiShape, ClipperLib::ctIntersection, ClipperLib::ptClip);
+    const LineArcGeometry::MultiShape holesOnly = DoBoolean(insideHalf, multiShape, ClipperLib::ctXor, ClipperLib::ptClip);
+    return holesOnly;
 }
 
 } // namespace LineArcOffsetDemo
