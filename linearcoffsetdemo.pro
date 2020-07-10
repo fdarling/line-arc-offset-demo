@@ -7,6 +7,7 @@ QT += widgets xml
 
 # GEOMETRY_ENGINES += cgal
 GEOMETRY_ENGINES += occt
+# GEOMETRY_ENGINES += clipper
 
 contains(GEOMETRY_ENGINES, cgal) {
 	HEADERS += \
@@ -59,6 +60,17 @@ contains(GEOMETRY_ENGINES, occt) {
 		-I/usr/local/include/opencascade \
 		-std=c++1z
 	DEFINES += USING_OCCT
+}
+{
+	HEADERS += \
+		src/clipper/GeometryClipper.h \
+		src/clipper/GeometryOperationsClipper.h
+	SOURCES += \
+		src/clipper/GeometryClipper.cpp \
+		src/clipper/GeometryOperationsClipper.cpp
+	LIBS += `pkg-config --libs polyclipping`
+	QMAKE_CXXFLAGS += `pkg-config --cflags polyclipping`
+	DEFINES += USING_CLIPPER
 }
 
 TARGET = LineArcOffsetDemo
