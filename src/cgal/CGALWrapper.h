@@ -73,6 +73,10 @@ static void DumpCurve(const T &curve)
     }
 }
 
+std::list<Polygon_with_holes_2> subtractPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b);
+std::list<Polygon_with_holes_2> intersectPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b);
+std::list<Polygon_with_holes_2> xorPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b);
+
 Polygon_2 construct_circle_polygon(const QPointF &center, double radius);
 Polygon_with_holes_2 construct_annulus_polygon(const QPointF &center, double radius_inner, double radius_outer);
 Polygon_2 construct_rect_polygon(const QRectF &rect);

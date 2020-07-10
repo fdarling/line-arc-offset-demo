@@ -1,5 +1,44 @@
 #include "CGALWrapper.h"
 
+std::list<Polygon_with_holes_2> subtractPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b)
+{
+    std::list<Polygon_with_holes_2> tmp = a;
+    std::list<Polygon_with_holes_2> result;
+    for (std::list<Polygon_with_holes_2>::const_iterator poly = b.begin(); poly != b.end(); ++poly)
+    {
+        result.clear();
+        for (std::list<Polygon_with_holes_2>::const_iterator poly_with_holes = tmp.begin(); poly_with_holes != tmp.end(); ++poly_with_holes)
+        {
+            CGAL::difference(*poly_with_holes, *poly, std::back_inserter(result));
+        }
+        tmp = result;
+    }
+    return result;
+}
+
+std::list<Polygon_with_holes_2> intersectPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b)
+{
+    std::list<Polygon_with_holes_2> all_combinations_of_a_and_b_intersected;
+    for (std::list<Polygon_with_holes_2>::const_iterator a_it = a.begin(); a_it != a.end(); ++a_it)
+    {
+        for (std::list<Polygon_with_holes_2>::const_iterator b_it = b.begin(); b_it != b.end(); ++b_it)
+        {
+            CGAL::intersection(*a_it, *b_it, std::back_inserter(all_combinations_of_a_and_b_intersected));
+        }
+    }
+    std::list<Polygon_with_holes_2> joined;
+    CGAL::join(all_combinations_of_a_and_b_intersected.begin(), all_combinations_of_a_and_b_intersected.end(), std::back_inserter(joined));
+    return joined;
+}
+
+std::list<Polygon_with_holes_2> xorPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b)
+{
+    std::list<Polygon_with_holes_2> result;
+    // TODO make this more efficient, this does XOR's the operands against themselves which does nothing when they are planar
+    CGAL::symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(result));
+    return result;
+}
+
 // Construct a polygon from a circle.
 Polygon_2 construct_circle_polygon(const QPointF &center, double radius)
 {
@@ -283,14 +322,34 @@ std::list<Polygon_with_holes_2> construct_polygon_offset(const Polygon_with_hole
 
 std::list<Polygon_with_holes_2> construct_polygon_list_offset(const std::list<Polygon_with_holes_2> &polygons, double radius)
 {
-    std::list<Polygon_with_holes_2> pieces = polygons;
+    std::list<Polygon_with_holes_2> pieces;
+
+    // union the original polygon to eliminate the holes if doing an outset
+    if (radius > 0.0)
+    {
+        pieces = polygons;
+    }
+
+    // make the individual overlapping strokes
     for (std::list<Polygon_with_holes_2>::const_iterator polygon_it = polygons.begin(); polygon_it != polygons.end(); ++polygon_it)
     {
-        pieces.splice(pieces.end(), construct_polygon_stroke(*polygon_it, radius));
+        pieces.splice(pieces.end(), construct_polygon_stroke(*polygon_it, std::abs(radius)));
     }
-    std::list<Polygon_with_holes_2> result;
-    CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(result));
-    return result;
+
+    // combine all the strokes
+    std::list<Polygon_with_holes_2> strokes;
+    CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(strokes));
+    // return strokes;
+
+    // outset
+    if (radius > 0.0)
+        return strokes;
+
+    // inset
+    const std::list<Polygon_with_holes_2> innerHalf = intersectPolygonLists(strokes, polygons);
+    // return innerHalf;
+    const std::list<Polygon_with_holes_2> holesOnly = xorPolygonLists(innerHalf, polygons);
+    return holesOnly;
 }
 
 std::list<Polygon_with_holes_2> construct_thermal(const QPointF &center, double radius_inner, double isolation, double width)
