@@ -17,6 +17,7 @@ NOTE: Clipper doesn't support true circular arcs, they are approximated with lin
 * [Qt](https://www.qt.io/) 5 (widgets and xml modules)
 * [CGAL](https://www.cgal.org/) 4.11.2 (older versions may work too)
 * [Open CASCADE Technology](https://www.opencascade.com/content/latest-release) 7.4.0 (older versions may work too, not sure about the "Community Edition"...)
+* [Clipper](http://www.angusj.com/delphi/clipper.php) 6.4.2 (older versions may work too)
 
 The relevant development packages to install on Ubuntu 18.04 (bionic) are:
 
