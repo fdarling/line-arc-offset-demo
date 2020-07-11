@@ -2,13 +2,18 @@
 #include "GeometryOCCT.h"
 #include "../GeometryQt.h"
 
+#include <TopoDS.hxx>
 #include <TopoDS_Face.hxx>
+#include <TopExp_Explorer.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepOffsetAPI_MakeOffset.hxx>
 #include <ShapeUpgrade_UnifySameDomain.hxx>
+#include <ShapeFix_Face.hxx>
+#include <gp_Pln.hxx>
 
+#include <BRepBuilderAPI_MakeFace.hxx>
 #include <BRepBuilderAPI_MakeWire.hxx>
 #include <BRepBuilderAPI_MakeVertex.hxx>
 #include <BRepBuilderAPI_MakeEdge.hxx>
@@ -173,16 +178,55 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry
 
     ShapeUpgrade_UnifySameDomain su(r);
     su.Build();
-    const TopoDS_Shape result = su.Shape();
-    
+    const TopoDS_Shape shape_broken = su.Shape();
+    if (0)
+    {
+        qDebug() << "Exporting IGES...";
+        IGES_Save("testcases/output.igs", shape_broken);
+    }
+    return TopoDS_ShapeToMultiShape(shape_broken, false);
+
+    // make sure we have at least 1 wire
+    TopExp_Explorer wire_it(shape_broken, TopAbs_WIRE);
+    if (!wire_it.More())
+        return LineArcGeometry::MultiShape();
+
+    // use the first wire as the boundary
+    const TopoDS_Wire boundary = TopoDS::Wire(wire_it.Current());
+    BRepBuilderAPI_MakeFace builder(gp_Pln(), boundary, true);
+    wire_it.Next();
+
+    // use the rest of the wires as holes
+    for (; wire_it.More(); wire_it.Next())
+    {
+        const TopoDS_Wire wire = TopoDS::Wire(wire_it.Current());
+        builder.Add(wire);
+    }
+
+    // build the face
+    const TopoDS_Face broken_face = builder.Face();
+    if (0)
+    {
+        qDebug() << "Exporting IGES...";
+        IGES_Save("testcases/output.igs", broken_face);
+    }
+    return TopoDS_ShapeToMultiShape(broken_face);
+
+    // fix the face
+    ShapeFix_Face fix(broken_face);
+    TopTools_DataMapOfShapeListOfShape MapWires;
+    fix.FixOrientation(MapWires);
+    fix.FixSplitFace(MapWires);
+    // fix.Perform();
+    const TopoDS_Face result = fix.Face();
+
     if (0)
     {
         qDebug() << "Exporting IGES...";
         IGES_Save("testcases/output.igs", result);
     }
-    
-    // qDebug() << "Converting offset results...";
-    return TopoDS_ShapeToMultiShape(result, false);
+    qDebug() << "Converting offset shape...";
+    return TopoDS_ShapeToMultiShape(result);
 }
 
 } // namespace LineArcOffsetDemo
