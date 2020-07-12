@@ -8,6 +8,7 @@ QT += widgets xml
 # GEOMETRY_ENGINES += cgal
 GEOMETRY_ENGINES += occt
 # GEOMETRY_ENGINES += clipper
+# GEOMETRY_ENGINES += boost
 
 contains(GEOMETRY_ENGINES, cgal) {
 	HEADERS += \
@@ -71,6 +72,15 @@ contains(GEOMETRY_ENGINES, clipper) {
 	LIBS += `pkg-config --libs polyclipping`
 	QMAKE_CXXFLAGS += `pkg-config --cflags polyclipping`
 	DEFINES += USING_CLIPPER
+}
+contains(GEOMETRY_ENGINES, boost) {
+	HEADERS += \
+		src/boost/GeometryBoost.h \
+		src/boost/GeometryOperationsBoost.h
+	SOURCES += \
+		src/boost/GeometryBoost.cpp \
+		src/boost/GeometryOperationsBoost.cpp
+	DEFINES += USING_BOOST
 }
 
 TARGET = LineArcOffsetDemo
