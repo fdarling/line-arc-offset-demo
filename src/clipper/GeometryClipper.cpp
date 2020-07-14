@@ -131,7 +131,7 @@ static ClipperLib::Path ContourToPath(const LineArcGeometry::Contour &contour)
         else
         {
             // add the desination
-            result.push_back(PointToIntPoint(it->line.p2));
+            AddToPath(result, PointToIntPoint(it->line.p2));
         }
     }
     return result;

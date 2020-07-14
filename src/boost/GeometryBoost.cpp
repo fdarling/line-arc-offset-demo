@@ -132,7 +132,7 @@ static BoostGeometry::Ring ContourToRing(const LineArcGeometry::Contour &contour
         else
         {
             // add the desination
-            result.push_back(PointToBoostPoint(it->line.p2));
+            AddToPath(result, PointToBoostPoint(it->line.p2));
         }
     }
     return result;
