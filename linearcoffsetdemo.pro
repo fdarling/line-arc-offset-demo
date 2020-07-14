@@ -9,6 +9,7 @@ QT += widgets xml
 GEOMETRY_ENGINES += occt
 # GEOMETRY_ENGINES += clipper
 # GEOMETRY_ENGINES += boost
+# GEOMETRY_ENGINES += geos
 
 contains(GEOMETRY_ENGINES, cgal) {
 	HEADERS += \
@@ -81,6 +82,17 @@ contains(GEOMETRY_ENGINES, boost) {
 		src/boost/GeometryBoost.cpp \
 		src/boost/GeometryOperationsBoost.cpp
 	DEFINES += USING_BOOST
+}
+contains(GEOMETRY_ENGINES, geos) {
+	HEADERS += \
+		src/geos/GeometryGEOS.h \
+		src/geos/GeometryOperationsGEOS.h
+	SOURCES += \
+		src/geos/GeometryGEOS.cpp \
+		src/geos/GeometryOperationsGEOS.cpp
+	LIBS += `geos-config --libs`
+	QMAKE_CXXFLAGS += `geos-config --cflags`
+	DEFINES += USING_GEOS
 }
 
 TARGET = LineArcOffsetDemo
