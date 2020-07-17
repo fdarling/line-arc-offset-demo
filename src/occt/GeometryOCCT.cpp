@@ -154,6 +154,11 @@ TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
 TopoDS_Face ShapeToTopoDS_Face(const LineArcGeometry::Shape &shape)
 {
     // qDebug() << "ShapeToTopoDS_Face";
+    if (shape.boundary.segments.empty())
+    {
+        qDebug() << "WARNING: converting an empty Shape to an undefined TopoDS_Face";
+        return TopoDS_Face();
+    }
     const bool boundary_needs_reversal = (shape.boundary.orientation() == LineArcGeometry::Segment::Clockwise);
     const LineArcGeometry::Contour fixed_boundary = boundary_needs_reversal ? shape.boundary.reversed() : shape.boundary;
     TopoDS_Wire boundary = ContourToTopoDS_Wire(fixed_boundary);

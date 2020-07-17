@@ -79,7 +79,7 @@ static void FuseShapeInto(TopoDS_Shape &result, const TopoDS_Shape &shape)
 {
     if (result.IsNull())
         result = shape;
-    else
+    else if (!shape.IsNull())
         result = DoBoolean<BRepAlgoAPI_Fuse>(result, shape);
 }
 
