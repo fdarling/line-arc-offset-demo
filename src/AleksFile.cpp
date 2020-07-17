@@ -133,9 +133,11 @@ LineArcGeometry::MultiShape AleksFile_Load(const QString &filePath)
     {
         Shape &shape = *shape_it;
         shape.boundary.fixSegmentOrientations();
+        shape.boundary.fixSegmentEndpoints();
         for (std::list<Contour>::iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
         {
             hole_it->fixSegmentOrientations();
+            hole_it->fixSegmentEndpoints();
         }
     }
 

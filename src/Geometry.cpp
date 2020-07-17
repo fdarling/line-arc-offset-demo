@@ -118,15 +118,36 @@ void Contour::fixSegmentOrientations()
     if (segments.size() < 2)
         return;
     Segment *prev = &segments.back();
+    bool doAgain = true;
+    for (int i = 0; i < 2 && doAgain; i++)
+    {
+        doAgain = false;
+        for (std::list<Segment>::iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
+        {
+            const LineArcGeometry::CoordinateType len1 = Line(prev->line.p2, it->line.p1).length(); // gap with neither reversed
+            const LineArcGeometry::CoordinateType len2 = Line(prev->line.p2, it->line.p2).length(); // gap with current reversed
+            if (len2 < len1)
+            {
+                if (len2 < 0.0001)
+                    *it = it->reversed();
+                else
+                    doAgain = true;
+            }
+        }
+    }
+    if (doAgain)
+    {
+        qDebug() << "WARNING: Contour::fixSegmentOrientation() wasn't completely successful";
+    }
+}
+
+void Contour::fixSegmentEndpoints()
+{
+    if (segments.size() < 2)
+        return;
+    Segment *prev = &segments.back();
     for (std::list<Segment>::iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
     {
-        const LineArcGeometry::CoordinateType len1 = Line(prev->line.p2, it->line.p1).length();
-        const LineArcGeometry::CoordinateType len2 = Line(prev->line.p2, it->line.p2).length();
-        if (len2 < len1 && len2 < 0.0001)
-        {
-            *it = it->reversed();
-        }
-
         if (Line(prev->line.p2, it->line.p1).length() < 0.0001)
         {
             if (it->isArc)
