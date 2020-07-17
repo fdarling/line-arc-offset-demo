@@ -314,6 +314,7 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
             return LineArcGeometry::Contour();
         }
     }
+    result.fixSegmentOrientations(); // TODO stop having to do this!
     if (!result.isValid())
     {
         qDebug() << "ERROR: generated invalid Contour from TopoDS_Wire!" << result;
@@ -321,14 +322,14 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
     return result;
 }
 
-LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
+LineArcGeometry::Shape TopoDS_ShapeToShape(const TopoDS_Shape &shape)
 {
     // qDebug() << "TopoDS_FaceToShape";
     LineArcGeometry::Shape result;
     // idea to determine the outer boundary taken from
     // https://www.opencascade.com/content/how-get-external-and-internal-boundary-holes-edges-mesh-face
     double largestArea = -1.0;
-    for (TopExp_Explorer wire_it(face, TopAbs_WIRE); wire_it.More(); wire_it.Next())
+    for (TopExp_Explorer wire_it(shape, TopAbs_WIRE); wire_it.More(); wire_it.Next())
     {
         const TopoDS_Wire wire = TopoDS::Wire(wire_it.Current());
         const LineArcGeometry::Contour contour = TopoDS_WireToContour(wire);
@@ -355,6 +356,12 @@ LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
         }
     }
     return result;
+}
+
+// TODO possibly remove this redundant function
+LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face)
+{
+    return TopoDS_ShapeToShape(face);
 }
 
 LineArcGeometry::MultiShape TopoDS_ShapeToMultiShape(const TopoDS_Shape &shape, bool useFaces)

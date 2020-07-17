@@ -20,6 +20,7 @@ TopoDS_Face MultiShapeToTopoDS_Face(const LineArcGeometry::MultiShape &multiShap
 
 LineArcGeometry::Point gp_PntToPoint(const gp_Pnt &pt);
 LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire);
+LineArcGeometry::Shape TopoDS_ShapeToShape(const TopoDS_Shape &shape);
 LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face);
 LineArcGeometry::MultiShape TopoDS_ShapeToMultiShape(const TopoDS_Shape &shape, bool useFaces = true);
 

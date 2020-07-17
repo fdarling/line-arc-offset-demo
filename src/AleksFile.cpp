@@ -74,34 +74,6 @@ static void ReadArc(Contour &contour, const Point &center, double radius, double
     }
 }
 
-static void FixArcs(Contour &contour)
-{
-    if (contour.segments.size() < 2)
-        return;
-    Segment *prev = &contour.segments.back();
-    for (std::list<Segment>::iterator it = contour.segments.begin(); it != contour.segments.end(); prev = &*it, ++it)
-    {
-        const LineArcGeometry::CoordinateType len1 = Line(prev->line.p2, it->line.p1).length();
-        const LineArcGeometry::CoordinateType len2 = Line(prev->line.p2, it->line.p2).length();
-        if (len2 < len1 && len2 < 0.0001)
-        {
-            *it = it->reversed();
-        }
-
-        if (Line(prev->line.p2, it->line.p1).length() < 0.0001)
-        {
-            if (it->isArc)
-            {
-                it->line.p1 = prev->line.p2;
-            }
-            else
-            {
-                prev->line.p2 = it->line.p1;
-            }
-        }
-    }
-}
-
 LineArcGeometry::MultiShape AleksFile_Load(const QString &filePath)
 {
     LineArcGeometry::MultiShape multiShape;
@@ -160,10 +132,10 @@ LineArcGeometry::MultiShape AleksFile_Load(const QString &filePath)
     for (std::list<Shape>::iterator shape_it = multiShape.shapes.begin(); shape_it != multiShape.shapes.end(); ++shape_it)
     {
         Shape &shape = *shape_it;
-        FixArcs(shape_it->boundary);
+        shape.boundary.fixSegmentOrientations();
         for (std::list<Contour>::iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
         {
-            FixArcs(*hole_it);
+            hole_it->fixSegmentOrientations();
         }
     }
 

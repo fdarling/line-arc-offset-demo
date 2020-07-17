@@ -182,6 +182,7 @@ public:
     }
     Segment::Orientation orientation() const;
     bool isValid() const;
+    void fixSegmentOrientations();
     std::list<Segment> segments;
 };
 

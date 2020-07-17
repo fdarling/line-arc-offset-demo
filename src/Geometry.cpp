@@ -113,6 +113,34 @@ bool Contour::isValid() const
     return true;
 }
 
+void Contour::fixSegmentOrientations()
+{
+    if (segments.size() < 2)
+        return;
+    Segment *prev = &segments.back();
+    for (std::list<Segment>::iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
+    {
+        const LineArcGeometry::CoordinateType len1 = Line(prev->line.p2, it->line.p1).length();
+        const LineArcGeometry::CoordinateType len2 = Line(prev->line.p2, it->line.p2).length();
+        if (len2 < len1 && len2 < 0.0001)
+        {
+            *it = it->reversed();
+        }
+
+        if (Line(prev->line.p2, it->line.p1).length() < 0.0001)
+        {
+            if (it->isArc)
+            {
+                it->line.p1 = prev->line.p2;
+            }
+            else
+            {
+                prev->line.p2 = it->line.p1;
+            }
+        }
+    }
+}
+
 Contour ContourFromLineAndRadius(const Line &line, double radius)
 {
     Contour contour;
