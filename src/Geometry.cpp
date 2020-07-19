@@ -7,6 +7,9 @@
 // #include <QVector2D>
 #include <QDebug>
 
+#include <algorithm>
+#include <utility>
+
 namespace LineArcGeometry {
 
 CoordinateType Line::length() const
@@ -113,29 +116,49 @@ bool Contour::isValid() const
     return true;
 }
 
+typedef std::pair<bool, bool> BoolPair;
+typedef std::pair<LineArcGeometry::CoordinateType, BoolPair> RatedCombination;
+
+static RatedCombination MakeRatedCombination(const Line &prev, const Line &curr, bool reversePrev, bool reverseCurr)
+{
+    const Line gapLine(reversePrev ? prev.p1 : prev.p2, reverseCurr ? curr.p2 : curr.p1);
+    return RatedCombination(gapLine.length(), BoolPair(reversePrev, reverseCurr));
+}
+
+static bool RatedCombinationCompare(const RatedCombination &a, RatedCombination &b)
+{
+    return a.first < b.first;
+}
+
 void Contour::fixSegmentOrientations()
 {
     if (segments.size() < 2)
         return;
+    RatedCombination combinations[4];
+    const int combinationLen = sizeof(combinations)/sizeof(combinations[0]);
     Segment *prev = &segments.back();
-    bool doAgain = true;
-    for (int i = 0; i < 2 && doAgain; i++)
+    for (std::list<Segment>::iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
     {
-        doAgain = false;
-        for (std::list<Segment>::iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
+        // weigh the possibilities for reversing the segments
+        for (int i = 0; i < combinationLen; i++)
         {
-            const LineArcGeometry::CoordinateType len1 = Line(prev->line.p2, it->line.p1).length(); // gap with neither reversed
-            const LineArcGeometry::CoordinateType len2 = Line(prev->line.p2, it->line.p2).length(); // gap with current reversed
-            if (len2 < len1)
-            {
-                if (len2 < 0.0001)
-                    *it = it->reversed();
-                else
-                    doAgain = true;
-            }
+            combinations[i] = MakeRatedCombination(prev->line, it->line, i & 1,i & 2);
+        }
+
+        // pick the combination of reversals resulting in the least gap between the end of "prev" and the start of "curr"
+        RatedCombination * const best = std::min_element(combinations, combinations + combinationLen, RatedCombinationCompare);
+
+        // perform the appropriate reversals
+        if (best->second.first)
+        {
+            *prev = prev->reversed();
+        }
+        if (best->second.second)
+        {
+            *it = it->reversed();
         }
     }
-    if (doAgain)
+    if (!isValid())
     {
         qDebug() << "WARNING: Contour::fixSegmentOrientation() wasn't completely successful";
     }
