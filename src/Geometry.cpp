@@ -116,6 +116,18 @@ bool Contour::isValid() const
     return true;
 }
 
+bool Contour::isCircle() const
+{
+    for (std::list<Segment>::const_iterator it = segments.begin(); it != segments.end(); ++it)
+    {
+        if (!it->isArc || !FuzzyComparePoints(it->center, segments.front().center))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
 typedef std::pair<bool, bool> BoolPair;
 typedef std::pair<LineArcGeometry::CoordinateType, BoolPair> RatedCombination;
 
@@ -183,6 +195,11 @@ void Contour::fixSegmentEndpoints()
             }
         }
     }
+}
+
+bool Shape::isAnnulus() const
+{
+    return boundary.isCircle() && holes.size() == 1 && holes.front().isCircle() && FuzzyComparePoints(boundary.segments.front().center, holes.front().segments.front().center);
 }
 
 Contour ContourFromLineAndRadius(const Line &line, double radius)

@@ -182,6 +182,7 @@ public:
     }
     Segment::Orientation orientation() const;
     bool isValid() const;
+    bool isCircle() const;
     void fixSegmentOrientations();
     void fixSegmentEndpoints();
     std::list<Segment> segments;
@@ -202,6 +203,7 @@ public:
         holes(hls)
     {
     }
+    bool isAnnulus() const;
     Contour boundary;
     std::list<Contour> holes;
 };
