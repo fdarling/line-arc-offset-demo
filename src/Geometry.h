@@ -185,6 +185,7 @@ public:
     bool isCircle() const;
     void fixSegmentOrientations();
     void fixSegmentEndpoints();
+    Contour approximatedArcs() const;
     std::list<Segment> segments;
 };
 
@@ -204,6 +205,7 @@ public:
     {
     }
     bool isAnnulus() const;
+    Shape approximatedArcs() const;
     Contour boundary;
     std::list<Contour> holes;
 };
@@ -218,6 +220,7 @@ public:
         shapes(shps)
     {
     }
+    MultiShape approximatedArcs() const;
     std::list<Shape> shapes;
 };
 

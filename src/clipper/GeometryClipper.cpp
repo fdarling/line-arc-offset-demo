@@ -72,67 +72,15 @@ LineArcGeometry::Point IntPointToPoint(const ClipperLib::IntPoint &pt)
     return LineArcGeometry::Point(FromClipperInt(pt.X), FromClipperInt(pt.Y));
 }
 
-static void AddToPath(ClipperLib::Path &path, const ClipperLib::IntPoint &pt)
-{
-    if (path.empty() || path.back() != pt)
-    {
-        path.push_back(pt);
-    }
-}
-
 static ClipperLib::Path ContourToPath(const LineArcGeometry::Contour &contour)
 {
+    const LineArcGeometry::Contour approximated = contour.approximatedArcs();
     ClipperLib::Path result;
-    if (!contour.segments.empty())
-        AddToPath(result, PointToIntPoint(contour.segments.front().line.p1));
-    for (std::list<LineArcGeometry::Segment>::const_iterator it = contour.segments.begin(); it != contour.segments.end(); ++it)
+    if (!approximated.segments.empty())
+        result.push_back(PointToIntPoint(approximated.segments.front().line.p1));
+    for (std::list<LineArcGeometry::Segment>::const_iterator it = approximated.segments.begin(); it != approximated.segments.end(); ++it)
     {
-        if (it->isArc)
-        {
-            const double radius = it->radius();
-            const double angleStepDegrees = 15.0;
-            const double angleStep = angleStepDegrees*M_PI/180.0;
-                  double angle1 = atan2(it->line.p1.y - it->center.y, it->line.p1.x - it->center.x);
-            const double angle2 = atan2(it->line.p2.y - it->center.y, it->line.p2.x - it->center.x);
-            const ClipperLib::Path::size_type beforeSize = result.size();
-            if (it->orientation == LineArcGeometry::Segment::CounterClockwise)
-            {
-                if (angle1 > angle2)
-                    angle1 -= 2*M_PI;
-                for (double angle = angle1; angle < angle2; angle += angleStep)
-                {
-                    const LineArcGeometry::Point pt = it->center + LineArcGeometry::Point(cos(angle), sin(angle))*radius;
-                    AddToPath(result, PointToIntPoint(pt));
-                }
-            }
-            else // Clockwise
-            {
-                if (angle1 < angle2)
-                    angle1 += 2*M_PI;
-                for (double angle = angle1; angle > angle2; angle -= angleStep)
-                {
-                    const LineArcGeometry::Point pt = it->center + LineArcGeometry::Point(cos(angle), sin(angle))*radius;
-                    AddToPath(result, PointToIntPoint(pt));
-                }
-            }
-
-            // ensure at least the midpoint is present (may not be necesary)
-            const ClipperLib::Path::size_type afterSize = result.size();
-            const ClipperLib::IntPoint midPoint = PointToIntPoint(it->midPoint());
-            if (afterSize == beforeSize)
-            {
-                AddToPath(result, midPoint);
-            }
-
-            // ensure the destination is present
-            const ClipperLib::IntPoint endPoint = PointToIntPoint(it->line.p2);
-            AddToPath(result, endPoint);
-        }
-        else
-        {
-            // add the desination
-            AddToPath(result, PointToIntPoint(it->line.p2));
-        }
+        result.push_back(PointToIntPoint(it->line.p2));
     }
     return result;
 }

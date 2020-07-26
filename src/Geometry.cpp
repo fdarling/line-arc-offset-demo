@@ -7,6 +7,7 @@
 // #include <QVector2D>
 #include <QDebug>
 
+#include <cmath>
 #include <algorithm>
 #include <utility>
 
@@ -197,9 +198,103 @@ void Contour::fixSegmentEndpoints()
     }
 }
 
+static void AddLineToContour(Contour &contour, const Point &pt1, const Point &pt2)
+{
+    if (pt1 != pt2)
+    {
+        contour.segments.push_back(Segment(Line(pt1, pt2)));
+    }
+}
+
+Contour Contour::approximatedArcs() const
+{
+    Contour result;
+    Point oldPoint;
+    if (!segments.empty())
+    {
+        oldPoint = segments.front().line.p1;
+    }
+    for (std::list<Segment>::const_iterator it = segments.begin(); it != segments.end(); ++it)
+    {
+        if (it->isArc)
+        {
+            const double radius = it->radius();
+            const double angleStepDegrees = 15.0;
+            const double angleStep = angleStepDegrees*M_PI/180.0;
+                  double angle1 = atan2(it->line.p1.y - it->center.y, it->line.p1.x - it->center.x);
+            const double angle2 = atan2(it->line.p2.y - it->center.y, it->line.p2.x - it->center.x);
+            const std::list<Segment>::size_type beforeSize = result.segments.size();
+            if (it->orientation == Segment::CounterClockwise)
+            {
+                if (angle1 > angle2)
+                    angle1 -= 2*M_PI;
+                for (double angle = angle1; angle < angle2; angle += angleStep)
+                {
+                    const Point pt = it->center + Point(cos(angle), sin(angle))*radius;
+                    AddLineToContour(result, oldPoint, pt);
+                    oldPoint = pt;
+                }
+            }
+            else // Clockwise
+            {
+                if (angle1 < angle2)
+                    angle1 += 2*M_PI;
+                for (double angle = angle1; angle > angle2; angle -= angleStep)
+                {
+                    const Point pt = it->center + Point(cos(angle), sin(angle))*radius;
+                    AddLineToContour(result, oldPoint, pt);
+                    oldPoint = pt;
+                }
+            }
+
+            // ensure at least the midpoint is present (may not be necesary)
+            const std::list<Segment>::size_type afterSize = result.segments.size();
+            const Point &midPoint = it->midPoint();
+            if (afterSize == beforeSize)
+            {
+                AddLineToContour(result, oldPoint, midPoint);
+                oldPoint = midPoint;
+            }
+
+            // ensure the destination is present
+            const Point &endPoint = it->line.p2;
+            AddLineToContour(result, oldPoint, endPoint);
+            oldPoint = endPoint;
+        }
+        else
+        {
+            // add the desination
+            AddLineToContour(result, oldPoint, it->line.p2);
+            oldPoint = it->line.p2;
+        }
+    }
+    return result;
+}
+
 bool Shape::isAnnulus() const
 {
     return boundary.isCircle() && holes.size() == 1 && holes.front().isCircle() && FuzzyComparePoints(boundary.segments.front().center, holes.front().segments.front().center);
+}
+
+Shape Shape::approximatedArcs() const
+{
+    Shape result;
+    result.boundary = boundary.approximatedArcs();
+    for (std::list<Contour>::const_iterator it = holes.begin(); it != holes.end(); ++it)
+    {
+        result.holes.push_back(it->approximatedArcs());
+    }
+    return result;
+}
+
+MultiShape MultiShape::approximatedArcs() const
+{
+    MultiShape result;
+    for (std::list<Shape>::const_iterator it = shapes.begin(); it != shapes.end(); ++it)
+    {
+        result.shapes.push_back(it->approximatedArcs());
+    }
+    return result;
 }
 
 Contour ContourFromLineAndRadius(const Line &line, double radius)

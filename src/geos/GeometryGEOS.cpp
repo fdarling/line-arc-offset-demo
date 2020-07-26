@@ -20,70 +20,16 @@ LineArcGeometry::Point CoordinateToPoint(const geos::geom::Coordinate &pt)
     return LineArcGeometry::Point(pt.x, pt.y);
 }
 
-static void AddToSequence(geos::geom::CoordinateSequence *sequence, const geos::geom::Coordinate &pt)
-{
-    if (sequence->isEmpty() || sequence->back() != pt)
-    {
-        sequence->add(pt);
-    }
-}
-
 geos::geom::LinearRing * ContourToLinearRing(const LineArcGeometry::Contour &contour, const geos::geom::GeometryFactory *factory)
 {
+    const LineArcGeometry::Contour approximated = contour.approximatedArcs();
     geos::geom::CoordinateSequence * const points = factory->getCoordinateSequenceFactory()->create(static_cast<std::size_t>(0), 0);
 
-    if (!contour.segments.empty())
+    if (!approximated.segments.empty())
+        points->add(PointToCoordinate(approximated.segments.front().line.p1));
+    for (std::list<LineArcGeometry::Segment>::const_iterator it = approximated.segments.begin(); it != approximated.segments.end(); ++it)
     {
-        AddToSequence(points, PointToCoordinate(contour.segments.front().line.p1));
-    }
-    for (std::list<LineArcGeometry::Segment>::const_iterator it = contour.segments.begin(); it != contour.segments.end(); ++it)
-    {
-        if (it->isArc)
-        {
-            const double radius = it->radius();
-            const double angleStepDegrees = 15.0;
-            const double angleStep = angleStepDegrees*M_PI/180.0;
-                  double angle1 = atan2(it->line.p1.y - it->center.y, it->line.p1.x - it->center.x);
-            const double angle2 = atan2(it->line.p2.y - it->center.y, it->line.p2.x - it->center.x);
-            const std::size_t beforeSize = points->size();
-            if (it->orientation == LineArcGeometry::Segment::CounterClockwise)
-            {
-                if (angle1 > angle2)
-                    angle1 -= 2*M_PI;
-                for (double angle = angle1; angle < angle2; angle += angleStep)
-                {
-                    const LineArcGeometry::Point pt = it->center + LineArcGeometry::Point(cos(angle), sin(angle))*radius;
-                    AddToSequence(points, PointToCoordinate(pt));
-                }
-            }
-            else // Clockwise
-            {
-                if (angle1 < angle2)
-                    angle1 += 2*M_PI;
-                for (double angle = angle1; angle > angle2; angle -= angleStep)
-                {
-                    const LineArcGeometry::Point pt = it->center + LineArcGeometry::Point(cos(angle), sin(angle))*radius;
-                    AddToSequence(points, PointToCoordinate(pt));
-                }
-            }
-
-            // ensure at least the midpoint is present (may not be necesary)
-            const std::size_t afterSize = points->size();
-            const geos::geom::Coordinate midPoint = PointToCoordinate(it->midPoint());
-            if (afterSize == beforeSize)
-            {
-                AddToSequence(points, midPoint);
-            }
-
-            // ensure the destination is present
-            const geos::geom::Coordinate endPoint = PointToCoordinate(it->line.p2);
-            AddToSequence(points, endPoint);
-        }
-        else
-        {
-            // add the desination
-            AddToSequence(points, PointToCoordinate(it->line.p2));
-        }
+        points->add(PointToCoordinate(it->line.p2));
     }
 
     geos::geom::LinearRing * const result = factory->createLinearRing(points);
