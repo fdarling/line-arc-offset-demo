@@ -1,14 +1,7 @@
 #include "GeometryScene.h"
 #include "GeometryQt.h"
-#ifdef USING_CGAL
-#include "cgal/GeometryOperationsCGAL.h"
-// #include "cgal/GeometryCGAL.h" // WARNING: pulling in CGAL headers will slow down compilation significantly
-// #include "cgal/CGALWrapper.h" // WARNING: pulling in CGAL headers will slow down compilation significantly
-#endif // USING_CGAL
-#ifdef USING_OCCT
-#include "occt/GeometryOperationsOCCT.h"
-#include "occt/GeometryOCCT.h"
-#endif // USING_OCCT
+#include "GeometryOperations.h"
+#include "AleksFile.h"
 #include "Svg.h"
 
 #include <QProgressDialog>
@@ -21,6 +14,8 @@ static void AddContourToPath(QPainterPath &path, const LineArcGeometry::Contour 
 {
     for (std::list<LineArcGeometry::Segment>::const_iterator it = contour.segments.begin(); it != contour.segments.end(); ++it)
     {
+        // const bool doMoveTo = true;
+        const bool doMoveTo = (it == contour.segments.begin());
         QPointF pt1(PointToQPointF(it->line.p1));
         QPointF pt2(PointToQPointF(it->line.p2));
         if (it->isArc)
@@ -37,24 +32,24 @@ static void AddContourToPath(QPainterPath &path, const LineArcGeometry::Contour 
             const double lineLength = QLineF(startPoint, endPoint).length();
             if (lineLength < 0.0001) // HACK, this is to fix some sort of rounding errors with .angle()...
             {
-                path.moveTo(startPoint);
+                if (doMoveTo) path.moveTo(startPoint);
                 path.lineTo(endPoint);
             }
             else
             {
-                path.arcMoveTo(circleRect, startAngle);
+                if (doMoveTo) path.arcMoveTo(circleRect, startAngle);
                 path.arcTo(circleRect, startAngle, isCCW ? (sweepAngle - 360.0) : sweepAngle);
             }
         }
         else
         {
-            path.moveTo(pt1);
+            if (doMoveTo) path.moveTo(pt1);
             path.lineTo(pt2);
         }
     }
 }
 
-static void AddShapeToScene(QGraphicsScene *scene, const LineArcGeometry::Shape &shape, const QColor &color)
+static void AddShapeToScene(QGraphicsScene *scene, const LineArcGeometry::Shape &shape, const QColor &color, const QBrush &brush)
 {
     QPainterPath path;
     AddContourToPath(path, shape.boundary);
@@ -62,14 +57,23 @@ static void AddShapeToScene(QGraphicsScene *scene, const LineArcGeometry::Shape 
     {
         AddContourToPath(path, *it);
     }
-    scene->addPath(path, QPen(color, 0.0));
+    scene->addPath(path, QPen(color, 0.0), brush);
 }
 
-static void AddMultiShapeToScene(QGraphicsScene *scene, const LineArcGeometry::MultiShape &multiShape, const QColor &color = Qt::black)
+static QColor ColorWithAlpha(const QColor &color, int alpha) __attribute__((unused));
+static QColor ColorWithAlpha(const QColor &color, int alpha)
+{
+    QColor result = color;
+    result.setAlpha(alpha);
+    return result;
+}
+
+static void AddMultiShapeToScene(QGraphicsScene *scene, const LineArcGeometry::MultiShape &multiShape, const QColor &color = Qt::black, const QBrush &brush = Qt::NoBrush)
+// static void AddMultiShapeToScene(QGraphicsScene *scene, const LineArcGeometry::MultiShape &multiShape, const QColor &color = Qt::black, const QBrush &brush = ColorWithAlpha(Qt::gray, 64))
 {
     for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
     {
-        AddShapeToScene(scene, *it, color);
+        AddShapeToScene(scene, *it, color, brush);
     }
 }
 
@@ -77,9 +81,12 @@ GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
 {
 }
 
-void GeometryScene::runTests()
+void GeometryScene::runTests(GeometryOperations &ops)
 {
     const LineArcGeometry::MultiShape overlappingShapes = SVG_Load("testcases/traces_01.svg");
+    // const LineArcGeometry::MultiShape overlappingShapes = AleksFile_Load("testcases/input_1_shape.txt");
+    // const LineArcGeometry::MultiShape overlappingShapes = AleksFile_Load("testcases/input_2_shapes.txt");
+    // AleksFile_Save("testcases/output.txt", overlappingShapes);
     enum TestType
     {
         TEST_RAW,
@@ -104,13 +111,6 @@ void GeometryScene::runTests()
         SVG_Save("testcases/output.svg", overlappingShapes);
         return;
     }
-#if defined(USING_CGAL)
-    GeometryOperationsCGAL ops;
-#elif defined(USING_OCCT)
-    GeometryOperationsOCCT ops;
-#else // !defined(USING_CGAL) && !defined(USING_OCCT)
-#error "Currently the program only supports one backend (CGAL or OCCT) at a time, in the future it will be more flexible"
-#endif // defined(USING_CGAL)
     if (testType == TEST_IDENTITY)
     {
         // test if geometry survives converting back and forth from the engine's internal format
@@ -162,26 +162,38 @@ void GeometryScene::runTests()
         // const double radii[] = {0.010, 0.020, 0.030, 0.040};
         const double radii[] = {0.010, 0.020, 0.030, 0.040, 0.050, 0.060, 0.070, 0.080, 0.090, 0.100, 0.110, 0.120, 0.130, 0.140, 0.150, 0.160, 0.170};
         // const double radii[] = {0.011};
+        // const double radii[] = {0.002, 0.004, 0.006, 0.008, 0.010, 0.012, 0.014, 0.016, 0.018, 0.020, 0.022, 0.024};
+        // const double radii[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.010, 0.011, 0.012, 0.013, 0.014, 0.015, 0.016};
         // const double radii[] = {0.005};
+        // const double radii[] = {0.0049};
+        // const double radii[] = {0.004};
+        // const double radii[] = {0.45};
         // const double radii[] = {0.020};
         const size_t NUM_RADII = sizeof(radii)/sizeof(radii[0]);
         QProgressDialog progress("Generating offsets...", "Stop", 0, NUM_RADII/*, this*/);
+        progress.setMinimumDuration(100);
         progress.setWindowModality(Qt::WindowModal);
+        QElapsedTimer timerTotal;
         QElapsedTimer timer;
         progress.setValue(0);
+        timerTotal.start();
         for (size_t i = 0; i < NUM_RADII; i++)
         {
             if (progress.wasCanceled())
                 break;
             const double radius = radii[i];
+            // const double radius = -radii[i];
             qDebug() << "Generating offset polygon" << (i+1) << "of" << NUM_RADII << "(" << radius << ")...";
             timer.start();
             const LineArcGeometry::MultiShape offset_shapes = ops.offset(joined, radius);
-            qDebug() << "...took" << (timer.nsecsElapsed()/1.0e9) << "seconds";
+            qDebug() << ("...took " + QString::number(timer.nsecsElapsed()/1.0e9, 'f', 3) + " seconds");
+            // AddMultiShapeToScene(this, offset_shapes, QColor(0, 80+5*i, 40));
             AddMultiShapeToScene(this, offset_shapes, Qt::green);
-            // SVG_Save("testcases/output.svg", offset_shapes);
+            // AddMultiShapeToScene(this, offset_shapes, Qt::green, ColorWithAlpha(Qt::green, 64));
+            SVG_Save("testcases/output.svg", offset_shapes);
             progress.setValue(i+1);
         }
+        qDebug() << ("Took " + QString::number(timerTotal.nsecsElapsed()/1.0e9, 'f', 3) + " seconds to generate all the offsets.");
     }
 }
 
