@@ -35,14 +35,13 @@
 
 namespace LineArcOffsetDemo {
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _geomView(new GeometryView), _geomScene(new GeometryScene), _coordinateLabel(new QLabel), _settings(nullptr)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _geomView(new GeometryView), _geomScene(new GeometryScene(this)), _coordinateLabel(new QLabel), _settings(nullptr)
 {
-    _coordinateLabel = new QLabel;
     statusBar()->addPermanentWidget(_coordinateLabel);
     setCentralWidget(_geomView);
     _geomView->setScene(_geomScene);
 
-    _settings = new QSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName());
+    _settings = new QSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName(), this);
     _loadSettings();
 
     connect(_geomView, SIGNAL(pointHovered(const QPointF &)), this, SLOT(slot_CoordinateHovered(const QPointF &)));
