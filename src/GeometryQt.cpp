@@ -96,4 +96,14 @@ QPointF PointToQPointF(const Point &pt)
     return QPointF(pt.x, pt.y);
 }
 
+QLineF LineToQLineF(const Line &line)
+{
+    return QLineF(PointToQPointF(line.p1), PointToQPointF(line.p2));
+}
+
+Point QPointFToPoint(const QPointF &pt)
+{
+    return Point(pt.x(), pt.y());
+}
+
 } // namespace LineArcGeometry

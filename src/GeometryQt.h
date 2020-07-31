@@ -4,6 +4,7 @@
 #include "Geometry.h"
 
 #include <QPointF>
+#include <QLineF>
 
 QT_BEGIN_NAMESPACE
 
@@ -21,6 +22,8 @@ QT_END_NAMESPACE
 namespace LineArcGeometry {
 
 QPointF PointToQPointF(const Point &pt);
+QLineF LineToQLineF(const Line &line);
+Point QPointFToPoint(const QPointF &pt);
 
 } // namespace LineArcGeometry
 

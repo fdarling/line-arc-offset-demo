@@ -13,9 +13,23 @@
 
 namespace LineArcGeometry {
 
+static const CoordinateType TOLERANCE = 0.0001;
+
 CoordinateType Line::length() const
 {
     return QLineF(PointToQPointF(p1), PointToQPointF(p2)).length();
+}
+
+// https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
+// TODO test this function
+CoordinateType Line::distanceTo(const Point &pt) const
+{
+    const CoordinateType len = length();
+    if (len < TOLERANCE)
+        return Line(p1, pt).length();
+    const Point delta = p2 - p1;
+    const CoordinateType distance = qAbs(delta.y*pt.x - delta.x*pt.y + p2.x*p1.y - p2.y*p1.x)/len;
+    return distance;
 }
 
 CoordinateType Segment::radius() const
@@ -36,11 +50,6 @@ Point Segment::midPoint() const
     const double scalar = (orientation == LineArcGeometry::Segment::Clockwise) ? -1.0 : 1.0;
     const QPointF qpt3(qptc + scalar*offsetN);
     return Point(qpt3.x(), qpt3.y());
-}
-
-static QLineF LineToQLineF(const Line &line)
-{
-    return QLineF(PointToQPointF(line.p1), PointToQPointF(line.p2));
 }
 
 Segment::Orientation Contour::orientation() const
@@ -184,7 +193,7 @@ void Contour::fixSegmentEndpoints()
     Segment *prev = &segments.back();
     for (std::list<Segment>::iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
     {
-        if (Line(prev->line.p2, it->line.p1).length() < 0.0001)
+        if (Line(prev->line.p2, it->line.p1).length() < TOLERANCE)
         {
             if (it->isArc)
             {
@@ -219,7 +228,7 @@ Contour Contour::approximatedArcs() const
         if (it->isArc)
         {
             const double radius = it->radius();
-            const double angleStepDegrees = 15.0;
+            const double angleStepDegrees = (360.0/24.0);
             const double angleStep = angleStepDegrees*M_PI/180.0;
                   double angle1 = atan2(it->line.p1.y - it->center.y, it->line.p1.x - it->center.x);
             const double angle2 = atan2(it->line.p2.y - it->center.y, it->line.p2.x - it->center.x);
@@ -271,6 +280,11 @@ Contour Contour::approximatedArcs() const
     return result;
 }
 
+Contour Contour::arcsRecovered() const
+{
+    return *this;
+}
+
 bool Shape::isAnnulus() const
 {
     return boundary.isCircle() && holes.size() == 1 && holes.front().isCircle() && FuzzyComparePoints(boundary.segments.front().center, holes.front().segments.front().center);
@@ -287,12 +301,33 @@ Shape Shape::approximatedArcs() const
     return result;
 }
 
+Shape Shape::arcsRecovered() const
+{
+    Shape result;
+    result.boundary = boundary.arcsRecovered();
+    for (std::list<Contour>::const_iterator it = holes.begin(); it != holes.end(); ++it)
+    {
+        result.holes.push_back(it->arcsRecovered());
+    }
+    return result;
+}
+
 MultiShape MultiShape::approximatedArcs() const
 {
     MultiShape result;
     for (std::list<Shape>::const_iterator it = shapes.begin(); it != shapes.end(); ++it)
     {
         result.shapes.push_back(it->approximatedArcs());
+    }
+    return result;
+}
+
+MultiShape MultiShape::arcsRecovered() const
+{
+    MultiShape result;
+    for (std::list<Shape>::const_iterator it = shapes.begin(); it != shapes.end(); ++it)
+    {
+        result.shapes.push_back(it->arcsRecovered());
     }
     return result;
 }

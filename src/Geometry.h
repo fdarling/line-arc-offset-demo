@@ -105,6 +105,7 @@ public:
         return Line(p2, p1);
     }
     CoordinateType length() const;
+    CoordinateType distanceTo(const Point &pt) const;
     Point p1;
     Point p2;
 };
@@ -138,8 +139,7 @@ public:
     }
     Segment reversed() const
     {
-        Segment result(line.reversed(), center, (orientation == Clockwise) ? CounterClockwise : Clockwise, isArc);
-        return result;
+        return Segment(line.reversed(), center, (orientation == Clockwise) ? CounterClockwise : Clockwise, isArc);
     }
     CoordinateType radius() const;
     Point midPoint() const;
@@ -178,7 +178,7 @@ public:
         {
             result.segments.push_back(it->reversed());
         }
-        return result;
+        return std::move(result);
     }
     Segment::Orientation orientation() const;
     bool isValid() const;
@@ -186,6 +186,7 @@ public:
     void fixSegmentOrientations();
     void fixSegmentEndpoints();
     Contour approximatedArcs() const;
+    Contour arcsRecovered() const;
     std::list<Segment> segments;
 };
 
@@ -206,6 +207,7 @@ public:
     }
     bool isAnnulus() const;
     Shape approximatedArcs() const;
+    Shape arcsRecovered() const;
     Contour boundary;
     std::list<Contour> holes;
 };
@@ -221,6 +223,7 @@ public:
     {
     }
     MultiShape approximatedArcs() const;
+    MultiShape arcsRecovered() const;
     std::list<Shape> shapes;
 };
 
