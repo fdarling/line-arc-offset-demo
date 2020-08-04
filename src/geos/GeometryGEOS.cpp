@@ -11,7 +11,7 @@
 
 namespace LineArcOffsetDemo {
 
-#if (GEOS_VERSION_MAJOR <= 3) && (GEOS_VERSION_MINOR <= 6)
+#if (GEOS_VERSION_MAJOR <= 3) && (GEOS_VERSION_MINOR <= 7)
 typedef std::vector<geos::geom::Geometry*> HoleVector;
 #else
 typedef std::vector<geos::geom::LinearRing*> HoleVector;
