@@ -1,7 +1,6 @@
 #include "GeometryCGAL.h"
 #include "../GeometryQt.h"
 
-#include <CGAL/Boolean_set_operations_2.h>
 // #include <CGAL/Boolean_set_operations_2/Gps_polygon_validation.h> // for has_valid_orientation_polygon()
 
 #include <QDebug>
@@ -63,7 +62,7 @@ QT_END_NAMESPACE
 
 namespace LineArcOffsetDemo {
 
-Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour)
+Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour, const CGAL::Orientation desiredOrientation)
 {
     Traits_2 traits;
     Polygon_2 result;
@@ -126,7 +125,7 @@ Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour)
     }
     // if (!has_valid_orientation_polygon(result, traits))
     // if (result.orientation() == CGAL::CLOCKWISE)
-    if (result.orientation() == CGAL::NEGATIVE)
+    if (result.orientation() != desiredOrientation)
     {
         result.reverse_orientation();
     }
@@ -138,10 +137,7 @@ Polygon_with_holes_2 ShapeToPolygonWithHoles(const LineArcGeometry::Shape &shape
     Polygon_with_holes_2 result(ContourToPolygon(shape.boundary));
     for (std::list<LineArcGeometry::Contour>::const_iterator it = shape.holes.begin(); it != shape.holes.end(); ++it)
     {
-        std::list<Polygon_with_holes_2> res;
-        Polygon_2 hole(ContourToPolygon(*it));
-        CGAL::difference(result, hole, std::back_inserter(res)); // TODO add holes some other way!
-        result = res.front();
+        result.add_hole(ContourToPolygon(*it, CGAL::NEGATIVE));
     }
     return result;
 }

@@ -6,7 +6,7 @@
 
 namespace LineArcOffsetDemo {
 
-Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour);
+Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour, const CGAL::Orientation desiredOrientation = CGAL::POSITIVE);
 Polygon_with_holes_2 ShapeToPolygonWithHoles(const LineArcGeometry::Shape &shape);
 std::list<Polygon_with_holes_2> MultiShapeToPolygonWithHolesList(const LineArcGeometry::MultiShape &multiShape);
 LineArcGeometry::Contour PolygonToContour(const Polygon_2 &polygon);
