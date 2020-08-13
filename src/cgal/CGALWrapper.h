@@ -20,9 +20,9 @@ typedef CGAL::Arrangement_2<Traits_2>                 Arrangement_2;*/
 
 ////////////////////////////////////////////////////////////////////
 
-#include <CGAL/Simple_cartesian.h>
+// #include <CGAL/Simple_cartesian.h>
 // #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-// #include <CGAL/Exact_predicates_exact_constructions_kernel.h>
+#include <CGAL/Exact_predicates_exact_constructions_kernel.h>
 #include <CGAL/Gps_circle_segment_traits_2.h>
 #include <CGAL/General_polygon_set_2.h>
 
@@ -30,9 +30,9 @@ typedef CGAL::Arrangement_2<Traits_2>                 Arrangement_2;*/
 
 namespace LineArcOffsetDemo {
 
-typedef CGAL::Simple_cartesian<double> Kernel;
+// typedef CGAL::Simple_cartesian<double> Kernel;
 // typedef CGAL::Exact_predicates_inexact_constructions_kernel Kernel;
-// typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
+typedef CGAL::Exact_predicates_exact_constructions_kernel Kernel;
 typedef Kernel::Point_2                                   Point_2;
 typedef Kernel::Circle_2                                  Circle_2;
 typedef Kernel::Line_2                                    Line_2;
