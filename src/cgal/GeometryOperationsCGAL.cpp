@@ -2,6 +2,8 @@
 #include "GeometryCGAL.h"
 #include "CGALWrapper.h"
 
+#include <CGAL/Boolean_set_operations_2.h>
+
 namespace LineArcOffsetDemo {
 
 LineArcGeometry::MultiShape GeometryOperationsCGAL::identity(const LineArcGeometry::MultiShape &multiShape)

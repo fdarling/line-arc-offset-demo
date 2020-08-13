@@ -1,7 +1,65 @@
 #include "GeometryCGAL.h"
 #include "../GeometryQt.h"
 
+#include <CGAL/Boolean_set_operations_2.h>
 // #include <CGAL/Boolean_set_operations_2/Gps_polygon_validation.h> // for has_valid_orientation_polygon()
+
+#include <QDebug>
+
+QT_BEGIN_NAMESPACE
+
+template <typename T>
+static QDebug WriteCircularArcCurveToDebug(QDebug debug, const T &curve) __attribute__((unused));
+template <typename T>
+static QDebug WriteCircularArcCurveToDebug(QDebug debug, const T &curve)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+    const LineArcGeometry::Point p1(CGAL::to_double(curve.source().x()), CGAL::to_double(curve.source().y()));
+    const LineArcGeometry::Point p2(CGAL::to_double(curve.target().x()), CGAL::to_double(curve.target().y()));
+    const LineArcGeometry::Line line(p1, p2);
+    if (curve.is_circular())
+    {
+        auto circle = curve.supporting_circle();
+        const LineArcGeometry::Point circleCenter(CGAL::to_double(circle.center().x()), CGAL::to_double(circle.center().y()));
+        debug << "Curve_2<Arc>(" << line << ", center = " << circleCenter << ", " << ((curve.orientation() == CGAL::CLOCKWISE) ? "CW" : "CCW") << ")";
+    }
+    else
+    {
+        debug << "Curve_2<Line>(" << line << ")";
+    }
+    return debug;
+}
+
+static QDebug operator<<(QDebug debug, const LineArcOffsetDemo::X_monotone_curve_2 &curve) __attribute__((unused));
+static QDebug operator<<(QDebug debug, const LineArcOffsetDemo::X_monotone_curve_2 &curve)
+{
+    return WriteCircularArcCurveToDebug(debug, curve);
+}
+
+static QDebug operator<<(QDebug debug, const LineArcOffsetDemo::Curve_2 &curve) __attribute__((unused));
+static QDebug operator<<(QDebug debug, const LineArcOffsetDemo::Curve_2 &curve)
+{
+    return WriteCircularArcCurveToDebug(debug, curve);
+}
+
+static QDebug operator<<(QDebug debug, const LineArcOffsetDemo::Polygon_2 &polygon) __attribute__((unused));
+static QDebug operator<<(QDebug debug, const LineArcOffsetDemo::Polygon_2 &polygon)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace();
+    debug << "Polygon_2(";
+    for (auto curve_it = polygon.curves_begin(); curve_it != polygon.curves_end(); ++curve_it)
+    {
+        if (curve_it != polygon.curves_begin())
+            debug.nospace() << ", ";
+        debug << *curve_it;
+    }
+    debug << ")";
+    return debug;
+}
+
+QT_END_NAMESPACE
 
 namespace LineArcOffsetDemo {
 
@@ -37,7 +95,14 @@ Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour)
             const Point_2 pt3(midPoint.x, midPoint.y);
             Curve_2 curve(pt1, pt3, pt2);
 #endif
-            traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
+            if (pt1 != pt2)
+            {
+                traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
+            }
+            else
+            {
+                qDebug() << "WARNING: zero length Segment in Contour, ignoring when adding to Polygon_2!";
+            }
         }
         else // it's a line
         {
@@ -75,7 +140,7 @@ Polygon_with_holes_2 ShapeToPolygonWithHoles(const LineArcGeometry::Shape &shape
     {
         std::list<Polygon_with_holes_2> res;
         Polygon_2 hole(ContourToPolygon(*it));
-        CGAL::difference(result, hole, std::back_inserter(res));
+        CGAL::difference(result, hole, std::back_inserter(res)); // TODO add holes some other way!
         result = res.front();
     }
     return result;
