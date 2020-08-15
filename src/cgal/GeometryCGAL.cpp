@@ -62,6 +62,11 @@ QT_END_NAMESPACE
 
 namespace LineArcOffsetDemo {
 
+static Point_2 PointToPoint_2(const LineArcGeometry::Point &pt)
+{
+    return Point_2(pt.x, pt.y);
+}
+
 Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour, const CGAL::Orientation desiredOrientation)
 {
     Traits_2 traits;
@@ -89,10 +94,10 @@ Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour, const CGAL::
             Curve_2 curve(circle, pt1, pt2);
 #else
             const LineArcGeometry::Point midPoint = it->midPoint();
-            const Point_2 pt1(it->line.p1.x, it->line.p1.y);
-            const Point_2 pt2(it->line.p2.x, it->line.p2.y);
-            const Point_2 pt3(midPoint.x, midPoint.y);
-            Curve_2 curve(pt1, pt3, pt2);
+            const Point_2 pt1(PointToPoint_2(it->line.p1));
+            const Point_2 pt2(PointToPoint_2(it->line.p2));
+            const Point_2 pt3(PointToPoint_2(midPoint));
+            const Curve_2 curve(pt1, pt3, pt2);
 #endif
             if (pt1 != pt2)
             {
@@ -100,7 +105,7 @@ Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour, const CGAL::
             }
             else
             {
-                qDebug() << "WARNING: zero length Segment in Contour, ignoring when adding to Polygon_2!";
+                qDebug() << "WARNING: zero length arc Segment in Contour, ignoring when adding to Polygon_2!";
             }
         }
         else // it's a line
@@ -108,10 +113,14 @@ Polygon_2 ContourToPolygon(const LineArcGeometry::Contour &contour, const CGAL::
             // NOTE: CGAL doesn't like zero-length lines!
             if (it->line.p1 != it->line.p2)
             {
-                Point_2 pt1(it->line.p1.x, it->line.p1.y);
-                Point_2 pt2(it->line.p2.x, it->line.p2.y);
-                Curve_2 curve(pt1, pt2);
+                const Point_2 pt1(PointToPoint_2(it->line.p1));
+                const Point_2 pt2(PointToPoint_2(it->line.p2));
+                const Curve_2 curve(pt1, pt2);
                 traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
+            }
+            else
+            {
+                qDebug() << "WARNING: zero length line Segment in Contour, ignoring when adding to Polygon_2!";
             }
         }
         // Construct the polygon.
