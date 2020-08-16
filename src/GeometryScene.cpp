@@ -1,6 +1,9 @@
 #include "GeometryScene.h"
 #include "GeometryQt.h"
 
+#include <QGraphicsPathItem>
+#include <QGraphicsItemGroup>
+
 namespace LineArcOffsetDemo {
 
 static void AddContourToPath(QPainterPath &path, const LineArcGeometry::Contour &contour)
@@ -42,11 +45,7 @@ static void AddContourToPath(QPainterPath &path, const LineArcGeometry::Contour 
     }
 }
 
-GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
-{
-}
-
-void GeometryScene::addShape(const LineArcGeometry::Shape &shape, const QPen &pen, const QBrush &brush)
+static QGraphicsItem * CreateShapeItem(const LineArcGeometry::Shape &shape, const QPen &pen, const QBrush &brush)
 {
     QPainterPath path;
     AddContourToPath(path, shape.boundary);
@@ -54,15 +53,33 @@ void GeometryScene::addShape(const LineArcGeometry::Shape &shape, const QPen &pe
     {
         AddContourToPath(path, *it);
     }
-    addPath(path, pen, brush);
+    QGraphicsPathItem * const item = new QGraphicsPathItem(path);
+    item->setPen(pen);
+    item->setBrush(brush);
+    return item;
 }
 
-void GeometryScene::addMultiShape(const LineArcGeometry::MultiShape &multiShape, const QPen &pen, const QBrush &brush)
+GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
 {
+}
+
+QGraphicsItem * GeometryScene::addShape(const LineArcGeometry::Shape &shape, const QPen &pen, const QBrush &brush)
+{
+    QGraphicsItem * const item = CreateShapeItem(shape, pen, brush);
+    addItem(item);
+    return item;
+}
+
+QGraphicsItem * GeometryScene::addMultiShape(const LineArcGeometry::MultiShape &multiShape, const QPen &pen, const QBrush &brush)
+{
+    QGraphicsItemGroup * const group = new QGraphicsItemGroup;
     for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
     {
-        addShape(*it, pen, brush);
+        QGraphicsItem * const item = CreateShapeItem(*it, pen, brush);
+        group->addToGroup(item);
     }
+    addItem(group);
+    return group;
 }
 
 } // namespace LineArcOffsetDemo
