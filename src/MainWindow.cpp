@@ -63,9 +63,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _actions(new Acti
     _geomView->setScene(_geomScene);
     _tree->setColumnCount(2);
     _tree->setHeaderLabels({"Geometry", "Name"});
+    _tree->setContextMenuPolicy(Qt::CustomContextMenu);
 
     {
-        QDockWidget * const dock = new QDockWidget;
+        QDockWidget * const dock = new QDockWidget("Geometry Tree");
         dock->setObjectName("tree_dock");
         dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
         addDockWidget(Qt::LeftDockWidgetArea, dock);
@@ -77,6 +78,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _actions(new Acti
 
     connect(_actions->fileNew, &QAction::triggered, this, &MainWindow::slot_FileNew);
     connect(_actions->fileQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
+    connect(_tree, &QTreeWidget::customContextMenuRequested, this, &MainWindow::slot_TreeContextMenuRequested);
+    connect(_tree, &QTreeWidget::currentItemChanged, this, &MainWindow::slot_TreeCurrentItemChanged);
     connect(_tree, &QTreeWidget::itemChanged, this, &MainWindow::slot_TreeItemChanged);
     connect(_geomView, &GeometryView::pointHovered, this, &MainWindow::slot_CoordinateHovered);
 
@@ -140,6 +143,62 @@ void MainWindow::slot_FileNew()
 {
     _tree->clear();
     _geomScene->clear();
+}
+
+static void RestoreGraphicsItemPen(QGraphicsPathItem *item)
+{
+    const QPen oldPen = item->data(0).value<QPen>();
+    item->setPen(oldPen);
+}
+
+static void OverrideGraphicsItemPen(QGraphicsPathItem *item)
+{
+    const QPen oldPen = item->pen();
+    item->setData(0, QVariant::fromValue(oldPen));
+    QPen newPen(Qt::red, 0.0);
+    item->setPen(newPen);
+}
+
+void MainWindow::slot_TreeContextMenuRequested(const QPoint &pos)
+{
+    // TODO deselect current item when clicking in blank area of tree widget
+    Q_UNUSED(pos);
+
+    QMenu menu;
+    menu.addAction("Clear selection");
+    QAction * const picked = menu.exec(_tree->mapToGlobal(pos));
+    if (picked)
+    {
+        _tree->setCurrentItem(nullptr);
+    }
+}
+
+void MainWindow::slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
+{
+    if (previous)
+    {
+        for (QTreeWidgetItemIterator it(previous); *it && (*it == previous || (*it)->parent() != previous->parent()); ++it)
+        {
+            QGraphicsItem * const rawSceneItem = (*it)->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
+            QGraphicsPathItem * const sceneItem = dynamic_cast<QGraphicsPathItem*>(rawSceneItem);
+            if (sceneItem)
+            {
+                RestoreGraphicsItemPen(sceneItem);
+            }
+        }
+    }
+    if (current)
+    {
+        for (QTreeWidgetItemIterator it(current); *it && (*it == current || (*it)->parent() != current->parent()); ++it)
+        {
+            QGraphicsItem * const rawSceneItem = (*it)->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
+            QGraphicsPathItem * const sceneItem = dynamic_cast<QGraphicsPathItem*>(rawSceneItem);
+            if (sceneItem)
+            {
+                OverrideGraphicsItemPen(sceneItem);
+            }
+        }
+    }
 }
 
 void MainWindow::slot_TreeItemChanged(QTreeWidgetItem *item, int column)

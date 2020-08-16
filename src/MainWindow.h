@@ -35,6 +35,8 @@ public:
     ~MainWindow();
 protected slots:
     void slot_FileNew();
+    void slot_TreeContextMenuRequested(const QPoint &pos);
+    void slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);
     void slot_TreeItemChanged(QTreeWidgetItem *item, int column);
     void slot_CoordinateHovered(const QPointF &pt);
 protected:
