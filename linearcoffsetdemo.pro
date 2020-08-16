@@ -1,5 +1,9 @@
 QT += widgets xml
+CONFIG += object_parallel_to_source
 # CONFIG += debug
+
+OBJECTS_DIR=build/obj
+MOC_DIR=build/moc
 
 # WARNING: precompiling the header seems to be slower!
 # CONFIG += precompile_header
@@ -105,6 +109,8 @@ HEADERS += \
 	src/GeometryQt.h \
 	src/GeometryScene.h \
 	src/GeometryView.h \
+	src/Actions.h \
+	src/MenuBar.h \
 	src/MainWindow.h
 
 SOURCES += \
@@ -115,5 +121,7 @@ SOURCES += \
 	src/GeometryQt.cpp \
 	src/GeometryScene.cpp \
 	src/GeometryView.cpp \
+	src/Actions.cpp \
+	src/MenuBar.cpp \
 	src/MainWindow.cpp \
 	src/main.cpp

@@ -1,4 +1,6 @@
 #include "MainWindow.h"
+#include "Actions.h"
+#include "MenuBar.h"
 #include "GeometryView.h"
 #include "GeometryScene.h"
 #include "GeometryOperations.h"
@@ -26,7 +28,7 @@
 
 #include <QtWidgets>
 #include <QDockWidget>
-#include <QListWidget>
+#include <QTreeWidget>
 #include <QLabel>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -41,6 +43,10 @@
 
 namespace LineArcOffsetDemo {
 
+static const int TREE_COLUMN_CHECKBOX = 0;
+static const int TREE_COLUMN_NAME = 1;
+static const int QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER = Qt::UserRole + 1;
+
 static QColor ColorWithAlpha(const QColor &color, int alpha) __attribute__((unused));
 static QColor ColorWithAlpha(const QColor &color, int alpha)
 {
@@ -49,16 +55,30 @@ static QColor ColorWithAlpha(const QColor &color, int alpha)
     return result;
 }
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _geomView(new GeometryView), _geomScene(new GeometryScene(this)), _coordinateLabel(new QLabel), _settings(nullptr)
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _actions(new Actions(this)), _menuBar(new MenuBar(_actions)), _tree(new QTreeWidget), _geomView(new GeometryView), _geomScene(new GeometryScene(this)), _coordinateLabel(new QLabel), _settings(nullptr)
 {
+    setMenuBar(_menuBar);
     statusBar()->addPermanentWidget(_coordinateLabel);
     setCentralWidget(_geomView);
     _geomView->setScene(_geomScene);
+    _tree->setColumnCount(2);
+    _tree->setHeaderLabels({"Geometry", "Name"});
+
+    {
+        QDockWidget * const dock = new QDockWidget;
+        dock->setObjectName("tree_dock");
+        dock->setFeatures(QDockWidget::NoDockWidgetFeatures);
+        addDockWidget(Qt::LeftDockWidgetArea, dock);
+        dock->setWidget(_tree);
+    }
 
     _settings = new QSettings(QCoreApplication::organizationName(), QCoreApplication::applicationName(), this);
     _loadSettings();
 
-    connect(_geomView, SIGNAL(pointHovered(const QPointF &)), this, SLOT(slot_CoordinateHovered(const QPointF &)));
+    connect(_actions->fileNew, &QAction::triggered, this, &MainWindow::slot_FileNew);
+    connect(_actions->fileQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
+    connect(_tree, &QTreeWidget::itemChanged, this, &MainWindow::slot_TreeItemChanged);
+    connect(_geomView, &GeometryView::pointHovered, this, &MainWindow::slot_CoordinateHovered);
 
     typedef QPair<QString, std::function<GeometryOperations*()> > EngineNameConstructorPair;
     QList<EngineNameConstructorPair> engineConstructors;
@@ -108,11 +128,30 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _geomView(new Geo
     else
     {
         _RunTests(*ops);
+        _tree->resizeColumnToContents(TREE_COLUMN_CHECKBOX);
     }
 }
 
 MainWindow::~MainWindow()
 {
+}
+
+void MainWindow::slot_FileNew()
+{
+    _tree->clear();
+    _geomScene->clear();
+}
+
+void MainWindow::slot_TreeItemChanged(QTreeWidgetItem *item, int column)
+{
+    if (column == TREE_COLUMN_CHECKBOX)
+    {
+        QGraphicsItem * const sceneItem = item->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
+        if (sceneItem)
+        {
+            sceneItem->setVisible(item->checkState(0) != Qt::Unchecked);
+        }
+    }
 }
 
 void MainWindow::slot_CoordinateHovered(const QPointF &pt)
@@ -124,6 +163,71 @@ void MainWindow::closeEvent(QCloseEvent *event)
 {
     _saveSettings();
     QMainWindow::closeEvent(event);
+}
+
+static QTreeWidgetItem * CreateContourTreeItem(const LineArcGeometry::Contour &contour, const QString &txt)
+{
+    QTreeWidgetItem * const contourItem = new QTreeWidgetItem;
+    contourItem->setText(TREE_COLUMN_CHECKBOX, txt);
+    for (std::list<LineArcGeometry::Segment>::const_iterator seg_it = contour.segments.begin(); seg_it != contour.segments.end(); ++seg_it)
+    {
+        const LineArcGeometry::Segment &segment = *seg_it;
+        // create tree Segment row
+        QTreeWidgetItem * const segmentItem = new QTreeWidgetItem;
+        segmentItem->setText(TREE_COLUMN_CHECKBOX, segment.isArc ? "Arc" : "Line");
+        contourItem->addChild(segmentItem);
+    }
+    return contourItem;
+}
+
+QTreeWidgetItem * MainWindow::_AddMultiShape(const LineArcGeometry::MultiShape &multiShape, const QString &name, const QPen &pen, const QBrush &brush)
+{
+    // create graphics MultiShape item
+    QGraphicsItemGroup * const sceneItemGroup = new QGraphicsItemGroup;
+    _geomScene->addItem(sceneItemGroup);
+
+    // create tree MultiShape row
+    QTreeWidgetItem * const multiShapeItem = new QTreeWidgetItem;
+    multiShapeItem->setText(TREE_COLUMN_CHECKBOX, "MultiShape (" + QString::number(multiShape.shapes.size()) + " shapes)");
+    multiShapeItem->setText(TREE_COLUMN_NAME, name);
+    multiShapeItem->setData(TREE_COLUMN_CHECKBOX, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER, QVariant::fromValue(static_cast<QGraphicsItem*>(sceneItemGroup)));
+    multiShapeItem->setFlags(multiShapeItem->flags() | Qt::ItemIsAutoTristate);
+    {
+        QTreeWidgetItem * topItem = _tree->topLevelItem(0);
+        if (!topItem)
+        {
+            topItem = new QTreeWidgetItem;
+            topItem->setText(TREE_COLUMN_CHECKBOX, "testcase");
+            _tree->addTopLevelItem(topItem);
+        }
+        topItem->addChild(multiShapeItem);
+        topItem->setExpanded(true);
+    }
+
+    // create tree/graphics Shape rows/items
+    for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = multiShape.shapes.begin(); shape_it != multiShape.shapes.end(); ++shape_it)
+    {
+        const LineArcGeometry::Shape shape = *shape_it;
+        // create grahics Shape
+        QGraphicsItem * const sceneItem = _geomScene->addShape(shape, pen, brush);
+        sceneItemGroup->addToGroup(sceneItem);
+
+        // create tree Shape row
+        QTreeWidgetItem * const shapeItem = new QTreeWidgetItem;
+        shapeItem->setText(TREE_COLUMN_CHECKBOX, "Shape (" + QString::number(shape.holes.size()) + " holes)");
+        shapeItem->setData(TREE_COLUMN_CHECKBOX, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER, QVariant::fromValue(sceneItem));
+        shapeItem->setCheckState(TREE_COLUMN_CHECKBOX, Qt::Checked);
+        multiShapeItem->addChild(shapeItem);
+
+        // create tree Contour rows
+        shapeItem->addChild(CreateContourTreeItem(shape.boundary, "boundary (" + QString::number(shape.boundary.segments.size()) + " segments)"));
+        for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
+        {
+            shapeItem->addChild(CreateContourTreeItem(*hole_it, "hole (" + QString::number(hole_it->segments.size()) + " segments)"));
+        }
+    }
+
+    return multiShapeItem;
 }
 
 void MainWindow::_RunTests(GeometryOperations &ops)
@@ -152,7 +256,7 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     if (testType == TEST_RAW)
     {
         // display the raw geometry imported from the SVG (before any operations are run on it)
-        _geomScene->addMultiShape(overlappingShapes);
+        _AddMultiShape(overlappingShapes, "overlapping");
         SVG_Save("testcases/output.svg", overlappingShapes);
         return;
     }
@@ -160,7 +264,7 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     {
         // test if geometry survives converting back and forth from the engine's internal format
         const LineArcGeometry::MultiShape reconverted = ops.identity(overlappingShapes);
-        _geomScene->addMultiShape(reconverted);
+        _AddMultiShape(reconverted, "identity");
         SVG_Save("testcases/output.svg", reconverted);
         return;
     }
@@ -168,25 +272,25 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     const LineArcGeometry::MultiShape joined = ops.join(overlappingShapes);
     if (testType == TEST_UNARY_UNION)
     {
-        _geomScene->addMultiShape(joined);
+        _AddMultiShape(joined, "unary union");
         SVG_Save("testcases/output.svg", joined);
     }
     else if (testType == TEST_UNION)
     {
         // further test union
         const LineArcGeometry::MultiShape addend = SVG_Load("testcases/traces_02.svg");
-        // _geomScene->addMultiShape(addend);
+        // _AddMultiShape(addend);
         const LineArcGeometry::MultiShape sum = ops.join(joined, addend);
-        _geomScene->addMultiShape(sum);
+        _AddMultiShape(sum, "union");
         SVG_Save("testcases/output.svg", sum);
     }
     else if (testType == TEST_INTERSECTION)
     {
         // test intersection
         const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
-        // _geomScene->addMultiShape(cutter);
+        // _AddMultiShape(cutter);
         const LineArcGeometry::MultiShape intersection = ops.intersection(joined, cutter);
-        _geomScene->addMultiShape(intersection);
+        _AddMultiShape(intersection, "intersection");
         SVG_Save("testcases/output.svg", intersection);
     }
     else if (testType == TEST_DIFFERENCE)
@@ -194,25 +298,25 @@ void MainWindow::_RunTests(GeometryOperations &ops)
         // test difference
         // const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/thermal.svg");
         const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
-        // _geomScene->addMultiShape(cutter);
+        // _AddMultiShape(cutter);
         const LineArcGeometry::MultiShape diffed = ops.difference(joined, cutter);
-        _geomScene->addMultiShape(diffed);
+        _AddMultiShape(diffed, "difference");
         SVG_Save("testcases/output.svg", diffed);
     }
     else if (testType == TEST_OFFSET)
     {
         // show the original geometry
-        _geomScene->addMultiShape(joined);
+        _AddMultiShape(joined, "unary union");
 
         // const double radii[] = {0.010, 0.020, 0.030, 0.040};
         // const double radii[] = {0.010, 0.020, 0.030, 0.040, 0.050, 0.060, 0.070, 0.080, 0.090, 0.100, 0.110, 0.120, 0.130, 0.140, 0.150, 0.160, 0.170};
         // const double radii[] = {0.011};
-        // const double radii[] = {0.002, 0.004, 0.006, 0.008, 0.010, 0.012, 0.014, 0.016, 0.018, 0.020, 0.022, 0.024};
+        const double radii[] = {0.002, 0.004, 0.006, 0.008, 0.010, 0.012, 0.014, 0.016, 0.018, 0.020, 0.022, 0.024};
         // const double radii[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.010, 0.011, 0.012, 0.013, 0.014, 0.015, 0.016};
         // const double radii[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008};
         // const double radii[] = {0.005};
         // const double radii[] = {0.0049};
-        const double radii[] = {0.004};
+        // const double radii[] = {0.004};
         // const double radii[] = {0.45};
         // const double radii[] = {0.020};
         const size_t NUM_RADII = sizeof(radii)/sizeof(radii[0]);
@@ -233,9 +337,10 @@ void MainWindow::_RunTests(GeometryOperations &ops)
             timer.start();
             const LineArcGeometry::MultiShape offset_shapes = ops.offset(joined, radius);
             qDebug() << ("...took " + QString::number(timer.nsecsElapsed()/1.0e9, 'f', 3) + " seconds");
-            // _geomScene->addMultiShape(offset_shapes, QPen(QColor(0, 80+5*i, 40), 0.0));
-            // _geomScene->addMultiShape(offset_shapes, QPen(Qt::green, 0.0));
-            _geomScene->addMultiShape(offset_shapes, QPen(Qt::green, 0.0), ColorWithAlpha(Qt::green, 64));
+            const QString name = QString("offset ") + (radius > 0.0 ? "+" : "") + QString::number(radius);
+            const QBrush brush = Qt::NoBrush;
+            // const QBrush brush = ColorWithAlpha(Qt::green, 64);
+            _AddMultiShape(offset_shapes, name, QPen(Qt::green, 0.0), brush);
             SVG_Save("testcases/output.svg", offset_shapes);
             progress.setValue(i+1);
         }
