@@ -12,6 +12,7 @@ namespace LineArcOffsetDemo {
 
 class GeometryView;
 class GeometryScene;
+class GeometryOperations;
 
 class MainWindow : public QMainWindow
 {
@@ -23,6 +24,7 @@ protected slots:
     void slot_CoordinateHovered(const QPointF &pt);
 protected:
     void closeEvent(QCloseEvent *event);
+    void _RunTests(GeometryOperations &ops);
     void _saveSettings();
     void _loadSettings();
 
