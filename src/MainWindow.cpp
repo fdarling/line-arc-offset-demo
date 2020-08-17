@@ -204,11 +204,21 @@ void MainWindow::slot_TreeContextMenuRequested(const QPoint &pos)
     }
 }
 
+static bool IsDescendant(QTreeWidgetItem *item, QTreeWidgetItem *ancestor)
+{
+    for (; item; item = item->parent())
+    {
+        if (item == ancestor)
+            return true;
+    }
+    return false;
+}
+
 void MainWindow::slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous)
 {
     if (previous)
     {
-        for (QTreeWidgetItemIterator it(previous); *it && (*it == previous || (*it)->parent() != previous->parent()); ++it)
+        for (QTreeWidgetItemIterator it(previous); IsDescendant(*it, previous); ++it)
         {
             QGraphicsItem * const rawSceneItem = (*it)->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
             QGraphicsPathItem * const sceneItem = dynamic_cast<QGraphicsPathItem*>(rawSceneItem);
@@ -220,7 +230,7 @@ void MainWindow::slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidg
     }
     if (current)
     {
-        for (QTreeWidgetItemIterator it(current); *it && (*it == current || (*it)->parent() != current->parent()); ++it)
+        for (QTreeWidgetItemIterator it(current); IsDescendant(*it, current); ++it)
         {
             QGraphicsItem * const rawSceneItem = (*it)->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
             QGraphicsPathItem * const sceneItem = dynamic_cast<QGraphicsPathItem*>(rawSceneItem);
