@@ -59,6 +59,30 @@ LineArcGeometry::MultiShape GeometryOperationsBoost::difference(const LineArcGeo
     return PolygonsToMultiShape(result);
 }
 
+LineArcGeometry::MultiShape GeometryOperationsBoost::symmetricDifference(const LineArcGeometry::MultiShape &multiShape)
+{
+    // qDebug() << "GeometryOperationsBoost::symmetricDifference()";
+    const BoostGeometry::Polygons polygons = MultiShapeToPolygons(multiShape);
+    BoostGeometry::Polygons xorResult;
+    for (BoostGeometry::Polygons::const_iterator it = polygons.begin(); it != polygons.end(); ++it)
+    {
+        BoostGeometry::Polygons result;
+        boost::geometry::sym_difference(xorResult, *it, result);
+        xorResult = result;
+    }
+    return PolygonsToMultiShape(xorResult);
+}
+
+LineArcGeometry::MultiShape GeometryOperationsBoost::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
+{
+    // qDebug() << "GeometryOperationsBoost::symmetricDifference()";
+    const BoostGeometry::Polygons aa = MultiShapeToPolygons(a);
+    const BoostGeometry::Polygons bb = MultiShapeToPolygons(b);
+    BoostGeometry::Polygons result;
+    boost::geometry::sym_difference(aa, bb, result);
+    return PolygonsToMultiShape(result);
+}
+
 LineArcGeometry::MultiShape GeometryOperationsBoost::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
 {
     // qDebug() << "GeometryOperationsBoost::offset()";

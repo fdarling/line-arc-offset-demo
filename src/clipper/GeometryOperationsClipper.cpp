@@ -13,15 +13,14 @@ LineArcGeometry::MultiShape GeometryOperationsClipper::identity(const LineArcGeo
     return PathsToMultiShape(paths);
 }
 
-LineArcGeometry::MultiShape GeometryOperationsClipper::join(const LineArcGeometry::MultiShape &multiShape)
+static LineArcGeometry::MultiShape DoUnary(const LineArcGeometry::MultiShape &multiShape, const ClipperLib::ClipType operation, const ClipperLib::PolyType type = ClipperLib::ptSubject)
 {
-    // qDebug() << "GeometryOperationsClipper::join()";
     ClipperLib::PolyTree solution;
     {
         ClipperLib::Clipper c;
         const ClipperLib::Paths paths = MultiShapeToPaths(multiShape);
-        c.AddPaths(paths, ClipperLib::ptSubject, true);
-        c.Execute(ClipperLib::ctUnion, solution, ClipperLib::pftPositive, ClipperLib::pftPositive);
+        c.AddPaths(paths, type, true);
+        c.Execute(operation, solution, ClipperLib::pftPositive, ClipperLib::pftPositive);
     }
     return PolyTreeToMultiShape(solution);
 }
@@ -41,6 +40,12 @@ static LineArcGeometry::MultiShape DoBoolean(const LineArcGeometry::MultiShape &
     return PolyTreeToMultiShape(solution);
 }
 
+LineArcGeometry::MultiShape GeometryOperationsClipper::join(const LineArcGeometry::MultiShape &multiShape)
+{
+    // qDebug() << "GeometryOperationsClipper::join()";
+    return DoUnary(multiShape, ClipperLib::ctUnion);
+}
+
 LineArcGeometry::MultiShape GeometryOperationsClipper::join(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     // qDebug() << "GeometryOperationsClipper::join()";
@@ -57,6 +62,32 @@ LineArcGeometry::MultiShape GeometryOperationsClipper::difference(const LineArcG
 {
     // qDebug() << "GeometryOperationsClipper::difference()";
     return DoBoolean(a, b, ClipperLib::ctDifference, ClipperLib::ptClip);
+}
+
+LineArcGeometry::MultiShape GeometryOperationsClipper::symmetricDifference(const LineArcGeometry::MultiShape &multiShape)
+{
+    // qDebug() << "GeometryOperationsClipper::symmetricDifference()";
+    LineArcGeometry::MultiShape result;
+    for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
+    {
+        if (result.shapes.empty())
+        {
+            result.shapes.push_back(*it);
+        }
+        else
+        {
+            LineArcGeometry::MultiShape cutter;
+            cutter.shapes.push_back(*it);
+            result = symmetricDifference(result, cutter);
+        }
+    }
+    return result;
+}
+
+LineArcGeometry::MultiShape GeometryOperationsClipper::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
+{
+    // qDebug() << "GeometryOperationsClipper::symmetricDifference()";
+    return DoBoolean(a, b, ClipperLib::ctXor, ClipperLib::ptClip);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsClipper::offset(const LineArcGeometry::MultiShape &multiShape, double radius)

@@ -297,20 +297,26 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     // AleksFile_Save("testcases/output.txt", overlappingShapes);
     enum TestType
     {
+        TEST_NONE,
         TEST_RAW,
         TEST_IDENTITY,
         TEST_UNARY_UNION,
         TEST_UNION,
         TEST_INTERSECTION,
         TEST_DIFFERENCE,
+        TEST_UNARY_XOR,
+        TEST_XOR,
         TEST_OFFSET
     } testType;
+    // testType = TEST_NONE;
     // testType = TEST_RAW;
     // testType = TEST_IDENTITY;
     // testType = TEST_UNARY_UNION;
     // testType = TEST_UNION;
     // testType = TEST_INTERSECTION;
     // testType = TEST_DIFFERENCE;
+    // testType = TEST_UNARY_XOR;
+    // testType = TEST_XOR;
     testType = TEST_OFFSET;
     if (testType == TEST_RAW)
     {
@@ -361,6 +367,24 @@ void MainWindow::_RunTests(GeometryOperations &ops)
         const LineArcGeometry::MultiShape diffed = ops.difference(joined, cutter);
         _AddMultiShape(diffed, "difference");
         SVG_Save("testcases/output.svg", diffed);
+    }
+    else if (testType == TEST_UNARY_XOR)
+    {
+        // test unary xor (symmetric difference)
+        _AddMultiShape(overlappingShapes, "overlapping");
+        const LineArcGeometry::MultiShape xorResult = ops.symmetricDifference(overlappingShapes);
+        _AddMultiShape(xorResult, "xor", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
+        // SVG_Save("testcases/output.svg", xorResult);
+    }
+    else if (testType == TEST_XOR)
+    {
+        // test boolean xor (symmetric difference)
+        _AddMultiShape(joined, "joined");
+        const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
+        _AddMultiShape(cutter, "cutter");
+        const LineArcGeometry::MultiShape xorResult = ops.symmetricDifference(joined, cutter);
+        _AddMultiShape(xorResult, "xor", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
+        // SVG_Save("testcases/output.svg", xorResult);
     }
     else if (testType == TEST_OFFSET)
     {

@@ -75,6 +75,24 @@ static TopoDS_Shape DoBoolean(const TopoDS_Shape &shapeA, const TopoDS_Shape &sh
     return su.Shape();
 }
 
+static TopoDS_Shape DoUnion(const TopoDS_Shape &shapeA, const TopoDS_Shape &shapeB)
+{
+    if (shapeA.IsNull())
+        return shapeB;
+    else if (shapeB.IsNull())
+        return shapeA;
+    return DoBoolean<BRepAlgoAPI_Fuse>(shapeA, shapeB);
+}
+
+static TopoDS_Shape DoDifference(const TopoDS_Shape &shapeA, const TopoDS_Shape &shapeB)
+{
+    if (shapeA.IsNull())
+        return TopoDS_Shape();
+    else if (shapeB.IsNull())
+        return shapeA;
+    return DoBoolean<BRepAlgoAPI_Cut>(shapeA, shapeB);
+}
+
 static void FuseShapeInto(TopoDS_Shape &result, const TopoDS_Shape &shape)
 {
     if (result.IsNull())
@@ -143,14 +161,35 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::difference(const LineArcGeom
     return TopoDS_ShapeToMultiShape(result);
 }
 
-template <typename T>
-const T & GetNth(const std::list<T> &l, int index)
+LineArcGeometry::MultiShape GeometryOperationsOCCT::symmetricDifference(const LineArcGeometry::MultiShape &multiShape)
 {
-    typename std::list<T>::const_iterator it = l.begin();
-    for (int i = 0; i < index; i++, ++it)
+    // qDebug() << "GeometryOperationsOCCT::symmetricDifference()";
+    LineArcGeometry::MultiShape result;
+    for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
     {
+        if (result.shapes.empty())
+        {
+            result.shapes.push_back(*it);
+        }
+        else
+        {
+            LineArcGeometry::MultiShape cutter;
+            cutter.shapes.push_back(*it);
+            result = symmetricDifference(result, cutter);
+        }
     }
-    return *it;
+    return result;
+}
+
+LineArcGeometry::MultiShape GeometryOperationsOCCT::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
+{
+    // qDebug() << "GeometryOperationsOCCT::symmetricDifference()";
+    const TopoDS_Face aa = MultiShapeToTopoDS_Face(a);
+    const TopoDS_Face bb = MultiShapeToTopoDS_Face(b);
+    const TopoDS_Shape a_minus_b = DoDifference(aa, bb);
+    const TopoDS_Shape b_minus_a = DoDifference(bb, aa);
+    const TopoDS_Shape result = DoUnion(a_minus_b, b_minus_a);
+    return TopoDS_ShapeToMultiShape(result);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry::MultiShape &multiShape, double radius)

@@ -374,10 +374,17 @@ std::list<Polygon_with_holes_2> intersectPolygonLists(const std::list<Polygon_wi
     return joined;
 }
 
+std::list<Polygon_with_holes_2> xorPolygonList(const std::list<Polygon_with_holes_2> &polygons)
+{
+    std::list<Polygon_with_holes_2> result;
+    CGAL::symmetric_difference(polygons.begin(), polygons.end(), std::back_inserter(result));
+    return result;
+}
+
 std::list<Polygon_with_holes_2> xorPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b)
 {
     std::list<Polygon_with_holes_2> result;
-    // TODO make this more efficient, this does XOR's the operands against themselves which does nothing when they are planar
+    // TODO make this more efficient, this XOR's the operands against themselves (not just the other set) which does nothing when they are planar
     CGAL::symmetric_difference(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(result));
     return result;
 }

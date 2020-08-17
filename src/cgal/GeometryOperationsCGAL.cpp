@@ -50,6 +50,21 @@ LineArcGeometry::MultiShape GeometryOperationsCGAL::difference(const LineArcGeom
     return PolygonWithHolesListToMultiShape(difference);
 }
 
+LineArcGeometry::MultiShape GeometryOperationsCGAL::symmetricDifference(const LineArcGeometry::MultiShape &multiShape)
+{
+    const std::list<Polygon_with_holes_2> polygons = MultiShapeToPolygonWithHolesList(multiShape);
+    const std::list<Polygon_with_holes_2> result = xorPolygonList(polygons);
+    return PolygonWithHolesListToMultiShape(result);
+}
+
+LineArcGeometry::MultiShape GeometryOperationsCGAL::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
+{
+    const std::list<Polygon_with_holes_2> aa = MultiShapeToPolygonWithHolesList(a);
+    const std::list<Polygon_with_holes_2> bb = MultiShapeToPolygonWithHolesList(b);
+    const std::list<Polygon_with_holes_2> result = xorPolygonLists(aa, bb);
+    return PolygonWithHolesListToMultiShape(result);
+}
+
 LineArcGeometry::MultiShape GeometryOperationsCGAL::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
 {
     const std::list<Polygon_with_holes_2> polygons = MultiShapeToPolygonWithHolesList(multiShape);

@@ -70,6 +70,32 @@ LineArcGeometry::MultiShape GeometryOperationsGEOS::difference(const LineArcGeom
     return DoBoolean(a, b, geos::operation::overlay::OverlayOp::OpCode::opDIFFERENCE);
 }
 
+LineArcGeometry::MultiShape GeometryOperationsGEOS::symmetricDifference(const LineArcGeometry::MultiShape &multiShape)
+{
+    // qDebug() << "GeometryOperationsGEOS::symmetricDifference()";
+    LineArcGeometry::MultiShape result;
+    for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
+    {
+        if (result.shapes.empty())
+        {
+            result.shapes.push_back(*it);
+        }
+        else
+        {
+            LineArcGeometry::MultiShape cutter;
+            cutter.shapes.push_back(*it);
+            result = symmetricDifference(result, cutter);
+        }
+    }
+    return result;
+}
+
+LineArcGeometry::MultiShape GeometryOperationsGEOS::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
+{
+    // qDebug() << "GeometryOperationsGEOS::symmetricDifference()";
+    return DoBoolean(a, b, geos::operation::overlay::OverlayOp::OpCode::opSYMDIFFERENCE);
+}
+
 LineArcGeometry::MultiShape GeometryOperationsGEOS::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
 {
     // qDebug() << "GeometryOperationsGEOS::offset()";
