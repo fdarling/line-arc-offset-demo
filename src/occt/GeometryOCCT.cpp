@@ -7,6 +7,7 @@
 #include <Geom_TrimmedCurve.hxx>
 #include <GC_MakeArcOfCircle.hxx>
 #include <TopExp_Explorer.hxx>
+#include <BRepTools_WireExplorer.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Edge.hxx>
 #include <TopoDS_Vertex.hxx>
@@ -204,11 +205,10 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
 {
     // qDebug() << "TopoDS_WireToContour";
     LineArcGeometry::Contour result;
-    // TODO is there a difference between TopExp_Explorer::Current() and TopExp_Explorer::Value()?
-    for (TopExp_Explorer edge_it(wire, TopAbs_EDGE); edge_it.More(); edge_it.Next())
+    for (BRepTools_WireExplorer edge_it(wire); edge_it.More(); edge_it.Next())
     {
         // get edge
-        const TopoDS_Edge edge = TopoDS::Edge(edge_it.Current());
+        const TopoDS_Edge &edge = edge_it.Current();
 
         // get curve and it's start/end points
         //TopLoc_Location L;
