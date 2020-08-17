@@ -55,6 +55,37 @@ static QColor ColorWithAlpha(const QColor &color, int alpha)
     return result;
 }
 
+static LineArcGeometry::MultiShape ExplodeContours(const LineArcGeometry::MultiShape &multiShape)
+{
+    LineArcGeometry::MultiShape result;
+    for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = multiShape.shapes.begin(); shape_it != multiShape.shapes.end(); ++shape_it)
+    {
+        const LineArcGeometry::Shape &shape = *shape_it;
+        // add boundary
+        result.shapes.push_back(LineArcGeometry::Shape(shape.boundary));
+        // add holes
+        for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
+        {
+            result.shapes.push_back(LineArcGeometry::Shape(*hole_it));
+        }
+    }
+    return result;
+}
+
+static LineArcGeometry::MultiShape OuterBoundaries(const LineArcGeometry::MultiShape &multiShape, LineArcOffsetDemo::GeometryOperations &ops)
+{
+    const LineArcGeometry::MultiShape exploded = ExplodeContours(multiShape);
+    const LineArcGeometry::MultiShape joined = ops.join(exploded);
+    return joined;
+}
+
+static LineArcGeometry::MultiShape PeelMultiShape(const LineArcGeometry::MultiShape &multiShape, LineArcOffsetDemo::GeometryOperations &ops)
+{
+    const LineArcGeometry::MultiShape outerBoundaries = OuterBoundaries(multiShape, ops);
+    const LineArcGeometry::MultiShape result = ops.symmetricDifference(multiShape, outerBoundaries);
+    return result;
+}
+
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _actions(new Actions(this)), _menuBar(new MenuBar(_actions)), _tree(new QTreeWidget), _geomView(new GeometryView), _geomScene(new GeometryScene(this)), _coordinateLabel(new QLabel), _settings(nullptr)
 {
     setMenuBar(_menuBar);
@@ -306,7 +337,9 @@ void MainWindow::_RunTests(GeometryOperations &ops)
         TEST_DIFFERENCE,
         TEST_UNARY_XOR,
         TEST_XOR,
-        TEST_OFFSET
+        TEST_OFFSET,
+        TEST_ONLY_BOUNDARIES,
+        TEST_ONLY_HOLES
     } testType;
     // testType = TEST_NONE;
     // testType = TEST_RAW;
@@ -318,6 +351,8 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     // testType = TEST_UNARY_XOR;
     // testType = TEST_XOR;
     testType = TEST_OFFSET;
+    // testType = TEST_ONLY_BOUNDARIES;
+    // testType = TEST_ONLY_HOLES;
     if (testType == TEST_RAW)
     {
         // display the raw geometry imported from the SVG (before any operations are run on it)
@@ -428,6 +463,18 @@ void MainWindow::_RunTests(GeometryOperations &ops)
             progress.setValue(i+1);
         }
         qDebug() << ("Took " + QString::number(timerTotal.nsecsElapsed()/1.0e9, 'f', 3) + " seconds to generate all the offsets.");
+    }
+    else if (testType == TEST_ONLY_BOUNDARIES)
+    {
+        _AddMultiShape(joined, "unary union");
+        const LineArcGeometry::MultiShape outerBoundaries = OuterBoundaries(joined, ops);
+        _AddMultiShape(outerBoundaries, "outer boundaries", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
+    }
+    else if (testType == TEST_ONLY_HOLES)
+    {
+        _AddMultiShape(joined, "unary union");
+        const LineArcGeometry::MultiShape peeled = PeelMultiShape(joined, ops);
+        _AddMultiShape(peeled, "peeled", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
     }
 }
 
