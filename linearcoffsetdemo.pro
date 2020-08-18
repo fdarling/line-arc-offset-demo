@@ -18,10 +18,12 @@ GEOMETRY_ENGINES += occt
 contains(GEOMETRY_ENGINES, cgal) {
 	HEADERS += \
 		src/cgal/CGALWrapper.h \
+		src/cgal/CGALQt.h \
 		src/cgal/GeometryCGAL.h \
 		src/cgal/GeometryOperationsCGAL.h
 	SOURCES += \
 		src/cgal/CGALWrapper_cpp.cpp \
+		src/cgal/CGALQt.cpp \
 		src/cgal/GeometryCGAL.cpp \
 		src/cgal/GeometryOperationsCGAL.cpp
 	LIBS += \

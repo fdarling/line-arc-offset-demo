@@ -63,6 +63,7 @@ typedef CGAL::General_polygon_set_2<Traits>               Polygon_set_2;
 typedef Traits::Polygon_2                                 Polygon_2;
 typedef Traits::Polygon_with_holes_2 Polygon_with_holes_2;*/
 
+void addCurveToPolygon(Polygon_2 &polygon, const Curve_2 &curve);
 std::list<Polygon_with_holes_2> subtractPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b);
 std::list<Polygon_with_holes_2> intersectPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b);
 std::list<Polygon_with_holes_2> xorPolygonList(const std::list<Polygon_with_holes_2> &polygons);
