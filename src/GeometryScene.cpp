@@ -63,6 +63,23 @@ GeometryScene::GeometryScene(QObject *parent) : QGraphicsScene(parent)
 {
 }
 
+QGraphicsItem * GeometryScene::addSegment(const LineArcGeometry::Segment &segment, const QPen &pen)
+{
+    LineArcGeometry::Contour contour;
+    contour.segments.push_back(segment);
+    return addContour(contour, pen);
+}
+
+QGraphicsItem * GeometryScene::addContour(const LineArcGeometry::Contour &contour, const QPen &pen)
+{
+    QPainterPath path;
+    AddContourToPath(path, contour);
+    QGraphicsPathItem * const item = new QGraphicsPathItem(path);
+    item->setPen(pen);
+    addItem(item);
+    return item;    
+}
+
 QGraphicsItem * GeometryScene::addShape(const LineArcGeometry::Shape &shape, const QPen &pen, const QBrush &brush)
 {
     QGraphicsItem * const item = CreateShapeItem(shape, pen, brush);

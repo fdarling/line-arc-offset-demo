@@ -4,6 +4,7 @@
 #include "GeometryView.h"
 #include "GeometryScene.h"
 #include "GeometryOperations.h"
+#include "GeometryQt.h"
 #include "AleksFile.h"
 #include "Svg.h"
 
@@ -41,11 +42,27 @@
 #include <QElapsedTimer>
 #include <QDebug>
 
+Q_DECLARE_METATYPE(LineArcGeometry::Contour);
+Q_DECLARE_METATYPE(LineArcGeometry::Segment);
+
 namespace LineArcOffsetDemo {
 
-static const int TREE_COLUMN_CHECKBOX = 0;
-static const int TREE_COLUMN_NAME = 1;
-static const int QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER = Qt::UserRole + 1;
+enum TreeWidgetColumns
+{
+    TREE_COLUMN_HIDDEN_DATA = 0,
+    TREE_COLUMN_CHECKBOX = 0,
+    TREE_COLUMN_NAME
+};
+enum TreeWidgetItemDataRoles
+{
+    QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER = Qt::UserRole + 1,
+    QTREEWIDGETITEM_DATA_ROLE_CONTOUR,
+    QTREEWIDGETITEM_DATA_ROLE_SEGMENT
+};
+enum GraphicsItemDataRoles
+{
+    QGRAPHICSITEM_DATA_ROLE_OLDPEN
+};
 
 static QColor ColorWithAlpha(const QColor &color, int alpha) __attribute__((unused));
 static QColor ColorWithAlpha(const QColor &color, int alpha)
@@ -86,7 +103,16 @@ static LineArcGeometry::MultiShape PeelMultiShape(const LineArcGeometry::MultiSh
     return result;
 }
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), _actions(new Actions(this)), _menuBar(new MenuBar(_actions)), _tree(new QTreeWidget), _geomView(new GeometryView), _geomScene(new GeometryScene(this)), _coordinateLabel(new QLabel), _settings(nullptr)
+MainWindow::MainWindow(QWidget *parent) :
+    QMainWindow(parent),
+    _actions(new Actions(this)),
+    _menuBar(new MenuBar(_actions)),
+    _tree(new QTreeWidget),
+    _geomView(new GeometryView),
+    _geomScene(new GeometryScene(this)),
+    _coordinateLabel(new QLabel),
+    _settings(nullptr),
+    _highlightedContourItem(nullptr)
 {
     setMenuBar(_menuBar);
     statusBar()->addPermanentWidget(_coordinateLabel);
@@ -172,20 +198,25 @@ MainWindow::~MainWindow()
 
 void MainWindow::slot_FileNew()
 {
+    // TODO consolidate this duplicate code
+    _geomScene->removeItem(_highlightedContourItem);
+    delete _highlightedContourItem;
+    _highlightedContourItem = nullptr;
+
     _tree->clear();
     _geomScene->clear();
 }
 
 static void RestoreGraphicsItemPen(QGraphicsPathItem *item)
 {
-    const QPen oldPen = item->data(0).value<QPen>();
+    const QPen oldPen = item->data(QGRAPHICSITEM_DATA_ROLE_OLDPEN).value<QPen>();
     item->setPen(oldPen);
 }
 
 static void OverrideGraphicsItemPen(QGraphicsPathItem *item)
 {
     const QPen oldPen = item->pen();
-    item->setData(0, QVariant::fromValue(oldPen));
+    item->setData(QGRAPHICSITEM_DATA_ROLE_OLDPEN, QVariant::fromValue(oldPen));
     QPen newPen(Qt::red, 0.0);
     item->setPen(newPen);
 }
@@ -220,7 +251,7 @@ void MainWindow::slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidg
     {
         for (QTreeWidgetItemIterator it(previous); IsDescendant(*it, previous); ++it)
         {
-            QGraphicsItem * const rawSceneItem = (*it)->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
+            QGraphicsItem * const rawSceneItem = (*it)->data(TREE_COLUMN_HIDDEN_DATA, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
             QGraphicsPathItem * const sceneItem = dynamic_cast<QGraphicsPathItem*>(rawSceneItem);
             if (sceneItem)
             {
@@ -232,7 +263,7 @@ void MainWindow::slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidg
     {
         for (QTreeWidgetItemIterator it(current); IsDescendant(*it, current); ++it)
         {
-            QGraphicsItem * const rawSceneItem = (*it)->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
+            QGraphicsItem * const rawSceneItem = (*it)->data(TREE_COLUMN_HIDDEN_DATA, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
             QGraphicsPathItem * const sceneItem = dynamic_cast<QGraphicsPathItem*>(rawSceneItem);
             if (sceneItem)
             {
@@ -240,16 +271,37 @@ void MainWindow::slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidg
             }
         }
     }
+    // remove old highlighted segment
+    if (_highlightedContourItem)
+    {
+        // TODO consolidate this duplicate code
+        _geomScene->removeItem(_highlightedContourItem);
+        delete _highlightedContourItem;
+        _highlightedContourItem = nullptr;
+    }
+    // possibly add new highlighted segment
+    if (current && current->data(TREE_COLUMN_HIDDEN_DATA, QTREEWIDGETITEM_DATA_ROLE_CONTOUR).canConvert<LineArcGeometry::Contour>())
+    {
+        const LineArcGeometry::Contour contour = current->data(TREE_COLUMN_HIDDEN_DATA, QTREEWIDGETITEM_DATA_ROLE_CONTOUR).value<LineArcGeometry::Contour>();
+        // qDebug() << "selected contour:" << contour;
+        _highlightedContourItem = _geomScene->addContour(contour, QPen(Qt::red, 0.0));
+    }
+    else if (current && current->data(TREE_COLUMN_HIDDEN_DATA, QTREEWIDGETITEM_DATA_ROLE_SEGMENT).canConvert<LineArcGeometry::Segment>())
+    {
+        const LineArcGeometry::Segment segment = current->data(TREE_COLUMN_HIDDEN_DATA, QTREEWIDGETITEM_DATA_ROLE_SEGMENT).value<LineArcGeometry::Segment>();
+        qDebug() << "selected segment:" << segment;
+        _highlightedContourItem = _geomScene->addSegment(segment, QPen(Qt::red, 0.0));
+    }
 }
 
 void MainWindow::slot_TreeItemChanged(QTreeWidgetItem *item, int column)
 {
     if (column == TREE_COLUMN_CHECKBOX)
     {
-        QGraphicsItem * const sceneItem = item->data(0, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
+        QGraphicsItem * const sceneItem = item->data(TREE_COLUMN_HIDDEN_DATA, QTREEWIDGETITEM_DATA_ROLE_QGRAPHICSITEM_POINTER).value<QGraphicsItem*>();
         if (sceneItem)
         {
-            sceneItem->setVisible(item->checkState(0) != Qt::Unchecked);
+            sceneItem->setVisible(item->checkState(TREE_COLUMN_CHECKBOX) != Qt::Unchecked);
         }
     }
 }
@@ -269,12 +321,14 @@ static QTreeWidgetItem * CreateContourTreeItem(const LineArcGeometry::Contour &c
 {
     QTreeWidgetItem * const contourItem = new QTreeWidgetItem;
     contourItem->setText(TREE_COLUMN_CHECKBOX, txt);
+    contourItem->setData(TREE_COLUMN_CHECKBOX, QTREEWIDGETITEM_DATA_ROLE_CONTOUR, QVariant::fromValue(contour));
     for (std::list<LineArcGeometry::Segment>::const_iterator seg_it = contour.segments.begin(); seg_it != contour.segments.end(); ++seg_it)
     {
         const LineArcGeometry::Segment &segment = *seg_it;
         // create tree Segment row
         QTreeWidgetItem * const segmentItem = new QTreeWidgetItem;
         segmentItem->setText(TREE_COLUMN_CHECKBOX, segment.isArc ? "Arc" : "Line");
+        segmentItem->setData(TREE_COLUMN_CHECKBOX, QTREEWIDGETITEM_DATA_ROLE_SEGMENT, QVariant::fromValue(segment));
         contourItem->addChild(segmentItem);
     }
     return contourItem;
@@ -298,6 +352,7 @@ QTreeWidgetItem * MainWindow::_AddMultiShape(const LineArcGeometry::MultiShape &
         {
             topItem = new QTreeWidgetItem;
             topItem->setText(TREE_COLUMN_CHECKBOX, "testcase");
+            topItem->setFlags(topItem->flags() | Qt::ItemIsAutoTristate);
             _tree->addTopLevelItem(topItem);
         }
         topItem->addChild(multiShapeItem);

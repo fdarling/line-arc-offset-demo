@@ -53,6 +53,7 @@ protected:
     GeometryScene *_geomScene;
     QLabel *_coordinateLabel;
     QSettings *_settings;
+    QGraphicsItem *_highlightedContourItem;
 };
 
 } // namespace LineArcOffsetDemo
