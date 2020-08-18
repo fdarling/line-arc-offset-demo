@@ -27,16 +27,14 @@ void GeometryView::wheelEvent(QWheelEvent *event)
 {
     // TODO this needs to be tested with touchpads and high resolution mousewheels (detent-less)
     // QGraphicsView::wheelEvent(event);
-    const QPoint numPixels  = event->pixelDelta();
+    // const QPoint numPixels  = event->pixelDelta();
     const QPoint numDegrees = event->angleDelta() / 8;
 
     /*if (!numPixels.isNull())
     {
-        // scrollWithPixels(numPixels);
     } else */if (!numDegrees.isNull())
     {
         const QPoint numSteps = numDegrees / 15;
-        // scrollWithDegrees(numSteps);
         const float factor = qPow(1.1, numSteps.y());
         scale(factor, factor);
     }
