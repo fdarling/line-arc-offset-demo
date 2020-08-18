@@ -13,4 +13,9 @@
   <line x1=" 0.1" y1=" 0.1" x2=" 0.4" y2=" 0.4" fill="none" stroke="black" stroke-width="0.030" stroke-linecap="round" />
   <rect x="0.3" y="0.1" width="0.1" height="0.1" stroke="black" stroke-width="0.010" stroke-linecap="round" />
   <circle cx="0.1" cy="0.3" r="0.05" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
+  
+  <line x1=" 0.20" y1=" 0.40" x2=" 0.25" y2=" 0.40" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
+  <line x1=" 0.20" y1=" 0.45" x2=" 0.25" y2=" 0.45" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
+  <line x1=" 0.21" y1=" 0.39" x2=" 0.21" y2=" 0.46" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
+  <line x1=" 0.24" y1=" 0.39" x2=" 0.24" y2=" 0.46" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
 </svg>
