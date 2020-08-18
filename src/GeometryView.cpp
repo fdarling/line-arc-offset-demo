@@ -30,10 +30,10 @@ void GeometryView::wheelEvent(QWheelEvent *event)
     const QPoint numPixels  = event->pixelDelta();
     const QPoint numDegrees = event->angleDelta() / 8;
 
-    if (!numPixels.isNull())
+    /*if (!numPixels.isNull())
     {
         // scrollWithPixels(numPixels);
-    } else if (!numDegrees.isNull())
+    } else */if (!numDegrees.isNull())
     {
         const QPoint numSteps = numDegrees / 15;
         // scrollWithDegrees(numSteps);
