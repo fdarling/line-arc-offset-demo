@@ -77,6 +77,7 @@ static TopoDS_Shape DoBoolean(const TopoDS_Shape &shapeA, const TopoDS_Shape &sh
 
 static TopoDS_Shape DoUnion(const TopoDS_Shape &shapeA, const TopoDS_Shape &shapeB)
 {
+    // TODO more reliable way of determining if they are empty to suppress warnings!
     if (shapeA.IsNull())
         return shapeB;
     else if (shapeB.IsNull())
@@ -86,6 +87,7 @@ static TopoDS_Shape DoUnion(const TopoDS_Shape &shapeA, const TopoDS_Shape &shap
 
 static TopoDS_Shape DoDifference(const TopoDS_Shape &shapeA, const TopoDS_Shape &shapeB)
 {
+    // TODO more reliable way of determining if they are empty to suppress warnings!
     if (shapeA.IsNull())
         return TopoDS_Shape();
     else if (shapeB.IsNull())
@@ -95,6 +97,7 @@ static TopoDS_Shape DoDifference(const TopoDS_Shape &shapeA, const TopoDS_Shape 
 
 static void FuseShapeInto(TopoDS_Shape &result, const TopoDS_Shape &shape)
 {
+    // TODO more reliable way of determining if they are empty to suppress warnings!
     if (result.IsNull())
         result = shape;
     else if (!shape.IsNull())
@@ -184,12 +187,80 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::symmetricDifference(const Li
 LineArcGeometry::MultiShape GeometryOperationsOCCT::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     // qDebug() << "GeometryOperationsOCCT::symmetricDifference()";
+#if 1
     const TopoDS_Face aa = MultiShapeToTopoDS_Face(a);
     const TopoDS_Face bb = MultiShapeToTopoDS_Face(b);
     const TopoDS_Shape a_minus_b = DoDifference(aa, bb);
     const TopoDS_Shape b_minus_a = DoDifference(bb, aa);
     const TopoDS_Shape result = DoUnion(a_minus_b, b_minus_a);
     return TopoDS_ShapeToMultiShape(result);
+#else
+    const LineArcGeometry::MultiShape a_minus_b = difference(a, b);
+    const LineArcGeometry::MultiShape b_minus_a = difference(b, a);
+    const LineArcGeometry::MultiShape joined = join(a_minus_b, b_minus_a);
+    return joined;
+#endif
+}
+
+static TopoDS_Shape MakeOffsetFromContour(const LineArcGeometry::Contour &contour, double radius)
+{
+    const bool boundary_needs_reversal = (contour.orientation() == LineArcGeometry::Segment::Clockwise);
+    const LineArcGeometry::Contour fixed_boundary = boundary_needs_reversal ? contour.reversed() : contour;
+    TopoDS_Wire boundary = ContourToTopoDS_Wire(fixed_boundary);
+    BRepOffsetAPI_MakeOffset off(boundary);
+    off.Init(GeomAbs_Arc);
+    off.Perform(radius);
+    if (!off.IsDone())
+    {
+        qDebug() << "ERROR: BRepOffsetAPI_MakeOffset::IsDone() is false!";
+    }
+    const TopoDS_Shape& offsetShape = off.Shape();
+    if (offsetShape.IsNull())
+    {
+        qDebug() << "WARNING: TopoDS_Shape::IsNull() is true (might be okay)";
+    }
+    return offsetShape;
+}
+
+static TopoDS_Shape MakeOffsetFromHoles(const LineArcGeometry::Shape &shape, double radius)
+{
+    if (shape.holes.empty())
+        return TopoDS_Shape();
+    BRepOffsetAPI_MakeOffset off;
+    for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
+    {
+        const bool hole_needs_reversal = (hole_it->orientation() != LineArcGeometry::Segment::Clockwise);
+        const LineArcGeometry::Contour fixed_hole = hole_needs_reversal ? hole_it->reversed() : *hole_it;
+        off.AddWire(ContourToTopoDS_Wire(fixed_hole));
+    }
+    off.Init(GeomAbs_Arc);
+    off.Perform(-radius); // NOTE: negative on purpose!
+    if (!off.IsDone())
+    {
+        qDebug() << "ERROR: BRepOffsetAPI_MakeOffset::IsDone() is false!";
+    }
+    const TopoDS_Shape& offsetShape = off.Shape();
+    if (offsetShape.IsNull())
+    {
+        qDebug() << "WARNING: TopoDS_Shape::IsNull() is true (might be okay)";
+    }
+    return offsetShape;
+}
+
+static TopoDS_Shape CombineOuterAndInnerOffsets(const TopoDS_Shape &outerShape, const TopoDS_Shape &innerShape)
+{
+    // qDebug() << "CombineOuterAndInnerOffsets()";
+    if (innerShape.IsNull())
+        return outerShape;
+    else if (outerShape.IsNull())
+        return TopoDS_Shape();
+    // qDebug() << "...converting boundary to TopoDS_Face...";
+    const TopoDS_Shape outerFace = ShapeToTopoDS_Face(TopoDS_ShapeToShape(outerShape));
+    // qDebug() << "...converting holes to TopoDS_Face...";
+    const TopoDS_Shape innerFace = ShapeToTopoDS_Face(TopoDS_ShapeToShape(innerShape));
+    // qDebug() << "...subtracting holes from boundary...";
+    const TopoDS_Shape offsetShape = DoBoolean<BRepAlgoAPI_Cut>(outerFace, innerFace);
+    return offsetShape;
 }
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
@@ -204,29 +275,19 @@ LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry
         qDebug() << "...converting LineArcGeometry::Shape to TopoDS_Face...";
         const TopoDS_Face face = ShapeToTopoDS_Face(*shape_it);
 
-        // offset the TopoDS_Face (resulting in wires, no longer a face)
-        qDebug() << "...offsetting TopoDS_Face into TopoDS_Shape containing wires...";
-        BRepOffsetAPI_MakeOffset off(face);
-        off.Init(GeomAbs_Arc);
-        off.Perform(radius);
-        if (!off.IsDone())
-        {
-            qDebug() << "ERROR: BRepOffsetAPI_MakeOffset::IsDone() is false!";
-        }
-        const TopoDS_Shape& offsetShape = off.Shape();
-        if (offsetShape.IsNull())
-        {
-            qDebug() << "WARNING: TopoDS_Shape::IsNull() is true (might be okay)";
-        }
-
-        /*qDebug() << "...fixing TopoDS_Shape...";
-        ShapeUpgrade_UnifySameDomain su(offsetShape);
-        su.Build();
-        const TopoDS_Shape fixedShape = su.Shape();*/
+        // generate outer boundary and inner holes offsets independently
+        qDebug() << "...offsetting outer boundary wire...";
+        const TopoDS_Shape outerShape = MakeOffsetFromContour(shape_it->boundary, radius);
+        qDebug() << "...offsetting hole wires...";
+        const TopoDS_Shape innerShape = MakeOffsetFromHoles(*shape_it, radius);
+        
+        // then combine them using boolean difference
+        qDebug() << "...combining offset boundary and interior offset holes...";
+        const TopoDS_Shape offsetShape = CombineOuterAndInnerOffsets(outerShape, innerShape);
 
         // take the TopoDS_Shape containing free wires (no faces) and turn it into a shape (the outer boundary is determined, the rest are holes)
         qDebug() << "...converting TopoDS_Shape to LineArcGeometry::Shape...";
-        const LineArcGeometry::Shape convertedOffsetShape = TopoDS_ShapeToShape(offsetShape); // or fixedShape
+        const LineArcGeometry::Shape convertedOffsetShape = TopoDS_ShapeToShape(offsetShape);
 
         // convert it back to "Face", this time with the boundary/holes
         qDebug() << "...converting LineArcGeometry::Shape to TopoDS_Face...";
