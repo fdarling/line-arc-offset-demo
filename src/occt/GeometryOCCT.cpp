@@ -360,6 +360,10 @@ LineArcGeometry::Shape TopoDS_ShapeToShape(const TopoDS_Shape &shape)
             result.holes.push_back(contour);
         }
     }
+    if (result.boundary.segments.empty())
+    {
+        qDebug() << "WARNING: empty TopoDS_Shape, will produce an invalid Shape!";
+    }
     return result;
 }
 
