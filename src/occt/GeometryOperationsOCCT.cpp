@@ -275,45 +275,45 @@ static TopoDS_Shape CombineOuterAndInnerOffsets(const TopoDS_Shape &outerShape, 
 
 LineArcGeometry::MultiShape GeometryOperationsOCCT::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
 {
-    qDebug() << "GeometryOperationsOCCT::offset()";
+    // qDebug() << "GeometryOperationsOCCT::offset()";
     TopoDS_Shape result;
-    qDebug() << "processing LineArcGeometry::Shape's...";
+    // qDebug() << "processing LineArcGeometry::Shape's...";
     for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = multiShape.shapes.begin(); shape_it != multiShape.shapes.end(); ++shape_it)
     {
-        qDebug() << "current LineArcGeometry::Shape:" << *shape_it;
+        // qDebug() << "current LineArcGeometry::Shape:";
         // convert the Shape to a TopoDS_Face
-        qDebug() << "...converting LineArcGeometry::Shape to TopoDS_Face...";
+        // qDebug() << "...converting LineArcGeometry::Shape to TopoDS_Face...";
         const TopoDS_Face face = ShapeToTopoDS_Face(*shape_it);
 
         // generate outer boundary and inner holes offsets independently
-        qDebug() << "...offsetting outer boundary wire...";
+        // qDebug() << "...offsetting outer boundary wire...";
         const TopoDS_Shape outerShape = MakeOffsetFromContour(shape_it->boundary, radius);
-        qDebug() << "...offsetting hole wires...";
+        // qDebug() << "...offsetting hole wires...";
         const TopoDS_Shape innerShape = MakeOffsetFromHoles(*shape_it, radius);
         
         // then combine them using boolean difference
-        qDebug() << "...combining offset boundary and interior offset holes...";
+        // qDebug() << "...combining offset boundary and interior offset holes...";
         const TopoDS_Shape offsetShape = CombineOuterAndInnerOffsets(outerShape, innerShape);
 
         // take the TopoDS_Shape containing free wires (no faces) and turn it into a shape (the outer boundary is determined, the rest are holes)
-        qDebug() << "...converting TopoDS_Shape to LineArcGeometry::Shape...";
+        // qDebug() << "...converting TopoDS_Shape to LineArcGeometry::Shape...";
         const LineArcGeometry::Shape convertedOffsetShape = TopoDS_ShapeToShape(offsetShape);
 
         // convert it back to "Face", this time with the boundary/holes
-        qDebug() << "...converting LineArcGeometry::Shape to TopoDS_Face...";
+        // qDebug() << "...converting LineArcGeometry::Shape to TopoDS_Face...";
         const TopoDS_Face reconvertedOffsetShape = ShapeToTopoDS_Face(convertedOffsetShape);
 
         // apply boolean union, which works because the holes are respected
-        qDebug() << "...fusing TopoDS_Face into cumulative TopoDS_Shape...";
+        // qDebug() << "...fusing TopoDS_Face into cumulative TopoDS_Shape...";
         FuseShapeInto(result, reconvertedOffsetShape);
     }
-    qDebug() << "...done processing LineArcGeometry::Shape's";
+    // qDebug() << "...done processing LineArcGeometry::Shape's";
     if (0)
     {
         qDebug() << "Exporting offset() result to IGES...";
         IGES_Save("testcases/output.igs", result);
     }
-    qDebug() << "...converting results to MultiShape...";
+    // qDebug() << "...converting results to MultiShape...";
     return TopoDS_ShapeToMultiShape(result);
 }
 
