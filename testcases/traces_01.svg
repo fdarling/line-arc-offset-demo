@@ -15,6 +15,7 @@
   <circle cx="0.1" cy="0.3" r="0.05" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
   
   <line x1=" 0.20" y1=" 0.40" x2=" 0.25" y2=" 0.40" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
+  <line x1=" 0.20" y1=" 0.425" x2="0.25" y2="0.425" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
   <line x1=" 0.20" y1=" 0.45" x2=" 0.25" y2=" 0.45" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
   <line x1=" 0.21" y1=" 0.39" x2=" 0.21" y2=" 0.46" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
   <line x1=" 0.24" y1=" 0.39" x2=" 0.24" y2=" 0.46" fill="none" stroke="black" stroke-width="0.010" stroke-linecap="round" />
