@@ -64,7 +64,7 @@ make install
 
 ## Configuring
 
-You will want to edit the `linearoffsetdemo.pro` file and choose which goemetry backends to use by commenting or uncommenting the appropriate lines. It is fine to have multiple engines enabled at the same time, the active engine can be chosen by passing the `--engine` command line option with the appropriate engine name.
+You will want to edit the `linearcoffsetdemo.pro` file and choose which goemetry backends to use by commenting or uncommenting the appropriate lines. It is fine to have multiple engines enabled at the same time, the active engine can be chosen by passing the `--engine` command line option with the appropriate engine name.
 
 This example shows using only OCCT:
 
