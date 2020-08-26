@@ -11,6 +11,7 @@ MOC_DIR=build/moc
 
 # GEOMETRY_ENGINES += cgal
 GEOMETRY_ENGINES += occt
+# GEOMETRY_ENGINES += cavc
 # GEOMETRY_ENGINES += clipper
 # GEOMETRY_ENGINES += boost
 # GEOMETRY_ENGINES += geos
@@ -68,6 +69,19 @@ contains(GEOMETRY_ENGINES, occt) {
 		-I/usr/local/include/opencascade \
 		-std=c++1z
 	DEFINES += USING_OCCT
+}
+contains(GEOMETRY_ENGINES, cavc) {
+	HEADERS += \
+		src/cavc/CavCQt.h \
+		src/cavc/GeometryCavC.h \
+		src/cavc/GeometryOperationsCavC.h
+	SOURCES += \
+		src/cavc/CavCQt.cpp \
+		src/cavc/GeometryCavC.cpp \
+		src/cavc/GeometryOperationsCavC.cpp
+	QMAKE_CXXFLAGS += \
+		-Ideps/CavalierContours/include
+	DEFINES += USING_CAVC
 }
 contains(GEOMETRY_ENGINES, clipper) {
 	HEADERS += \

@@ -10,13 +10,13 @@
 
 #ifdef USING_CGAL
 #include "cgal/GeometryOperationsCGAL.h"
-// #include "cgal/GeometryCGAL.h" // WARNING: pulling in CGAL headers will slow down compilation significantly
-// #include "cgal/CGALWrapper.h" // WARNING: pulling in CGAL headers will slow down compilation significantly
 #endif // USING_CGAL
 #ifdef USING_OCCT
 #include "occt/GeometryOperationsOCCT.h"
-#include "occt/GeometryOCCT.h"
 #endif // USING_OCCT
+#ifdef USING_CAVC
+#include "cavc/GeometryOperationsCavC.h"
+#endif // USING_CAVC
 #ifdef USING_CLIPPER
 #include "clipper/GeometryOperationsClipper.h"
 #endif // USING_CLIPPER
@@ -103,6 +103,11 @@ static LineArcGeometry::MultiShape PeelMultiShape(const LineArcGeometry::MultiSh
     return result;
 }
 
+static void Uncheck(QTreeWidgetItem *item)
+{
+    item->setCheckState(TREE_COLUMN_CHECKBOX, Qt::Unchecked);
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     _actions(new Actions(this)),
@@ -148,6 +153,9 @@ MainWindow::MainWindow(QWidget *parent) :
 #ifdef USING_OCCT
     engineConstructors.append(EngineNameConstructorPair("occt", []() {return new GeometryOperationsOCCT();}));
 #endif // USING_OCCT
+#ifdef USING_CAVC
+    engineConstructors.append(EngineNameConstructorPair("cavc", []() {return new GeometryOperationsCavC();}));
+#endif // USING_CAVC
 #ifdef USING_CLIPPER
     engineConstructors.append(EngineNameConstructorPair("clipper", []() {return new GeometryOperationsClipper();}));
 #endif // USING_CLIPPER
@@ -422,56 +430,61 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     {
         // display the raw geometry imported from the SVG (before any operations are run on it)
         _AddMultiShape(overlappingShapes, "overlapping");
-        SVG_Save("testcases/output.svg", overlappingShapes);
+        // SVG_Save("testcases/output.svg", overlappingShapes);
         return;
     }
     if (testType == TEST_IDENTITY)
     {
         // test if geometry survives converting back and forth from the engine's internal format
+        Uncheck(_AddMultiShape(overlappingShapes, "original"));
         const LineArcGeometry::MultiShape reconverted = ops.identity(overlappingShapes);
-        _AddMultiShape(reconverted, "identity");
-        SVG_Save("testcases/output.svg", reconverted);
+        _AddMultiShape(reconverted, "reconverted");
+        // SVG_Save("testcases/output.svg", reconverted);
         return;
     }
     // combine the overlapping contents of the test case file using union
     const LineArcGeometry::MultiShape joined = ops.join(overlappingShapes);
     if (testType == TEST_UNARY_UNION)
     {
+        Uncheck(_AddMultiShape(overlappingShapes, "overlapping"));
         _AddMultiShape(joined, "unary union");
-        SVG_Save("testcases/output.svg", joined);
+        // SVG_Save("testcases/output.svg", joined);
     }
     else if (testType == TEST_UNION)
     {
         // further test union
         const LineArcGeometry::MultiShape addend = SVG_Load("testcases/traces_02.svg");
-        // _AddMultiShape(addend);
+        Uncheck(_AddMultiShape(joined, "A"));
+        Uncheck(_AddMultiShape(addend, "B"));
         const LineArcGeometry::MultiShape sum = ops.join(joined, addend);
         _AddMultiShape(sum, "union");
-        SVG_Save("testcases/output.svg", sum);
+        // SVG_Save("testcases/output.svg", sum);
     }
     else if (testType == TEST_INTERSECTION)
     {
         // test intersection
-        const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
-        // _AddMultiShape(cutter);
-        const LineArcGeometry::MultiShape intersection = ops.intersection(joined, cutter);
+        const LineArcGeometry::MultiShape conjuct = SVG_Load("testcases/traces_02.svg");
+        Uncheck(_AddMultiShape(joined, "A"));
+        Uncheck(_AddMultiShape(conjuct, "B"));
+        const LineArcGeometry::MultiShape intersection = ops.intersection(joined, conjuct);
         _AddMultiShape(intersection, "intersection");
-        SVG_Save("testcases/output.svg", intersection);
+        // SVG_Save("testcases/output.svg", intersection);
     }
     else if (testType == TEST_DIFFERENCE)
     {
         // test difference
         // const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/thermal.svg");
-        const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
-        // _AddMultiShape(cutter);
-        const LineArcGeometry::MultiShape diffed = ops.difference(joined, cutter);
+        const LineArcGeometry::MultiShape subtrahend = SVG_Load("testcases/traces_02.svg");
+        Uncheck(_AddMultiShape(joined, "A"));
+        Uncheck(_AddMultiShape(subtrahend, "B"));
+        const LineArcGeometry::MultiShape diffed = ops.difference(joined, subtrahend);
         _AddMultiShape(diffed, "difference");
-        SVG_Save("testcases/output.svg", diffed);
+        // SVG_Save("testcases/output.svg", diffed);
     }
     else if (testType == TEST_UNARY_XOR)
     {
         // test unary xor (symmetric difference)
-        _AddMultiShape(overlappingShapes, "overlapping");
+        Uncheck(_AddMultiShape(overlappingShapes, "overlapping", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64)));
         const LineArcGeometry::MultiShape xorResult = ops.symmetricDifference(overlappingShapes);
         _AddMultiShape(xorResult, "xor", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
         // SVG_Save("testcases/output.svg", xorResult);
@@ -479,9 +492,9 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     else if (testType == TEST_XOR)
     {
         // test boolean xor (symmetric difference)
-        _AddMultiShape(joined, "joined");
+        Uncheck(_AddMultiShape(joined, "A", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64)));
         const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
-        _AddMultiShape(cutter, "cutter");
+        Uncheck(_AddMultiShape(cutter, "B", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64)));
         const LineArcGeometry::MultiShape xorResult = ops.symmetricDifference(joined, cutter);
         _AddMultiShape(xorResult, "xor", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
         // SVG_Save("testcases/output.svg", xorResult);
@@ -498,6 +511,7 @@ void MainWindow::_RunTests(GeometryOperations &ops)
         // const double radii[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.009, 0.010, 0.011, 0.012, 0.013, 0.014, 0.015, 0.016};
         // const double radii[] = {0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008};
         // const double radii[] = {0.005};
+        // const double radii[] = {-0.0049, -0.005, 0.0049, 0.005};
         // const double radii[] = {0.0049};
         // const double radii[] = {0.004};
         // const double radii[] = {0.45};
@@ -524,7 +538,7 @@ void MainWindow::_RunTests(GeometryOperations &ops)
             const QBrush brush = Qt::NoBrush;
             // const QBrush brush = ColorWithAlpha(Qt::green, 64);
             _AddMultiShape(offset_shapes, name, QPen(Qt::green, 0.0), brush);
-            SVG_Save("testcases/output.svg", offset_shapes);
+            // SVG_Save("testcases/output.svg", offset_shapes);
             progress.setValue(i+1);
         }
         qDebug() << ("Took " + QString::number(timerTotal.nsecsElapsed()/1.0e9, 'f', 3) + " seconds to generate all the offsets.");
