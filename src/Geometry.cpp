@@ -52,6 +52,47 @@ Point Segment::midPoint() const
     return Point(qpt3.x(), qpt3.y());
 }
 
+// https://stackoverflow.com/questions/14066933/direct-way-of-computing-clockwise-angle-between-2-vectors/16544330#16544330
+static double GetAngleBetween(const QLineF &a, const QLineF &b)
+{
+    const QPointF da = (a.p2() - a.p1());
+    const QPointF db = (b.p2() - b.p1());
+    const double x1 = da.x();
+    const double y1 = da.y();
+    const double x2 = db.x();
+    const double y2 = db.y();
+    const double dot = x1*x2 + y1*y2;
+    const double det = x1*y2 - y1*x2;
+    const double angle = atan2(det, dot);
+    return angle*180.0/M_PI;
+}
+
+// NOTE: not normalized (doesn't need to be for angle measurement)
+static QLineF GetTangent(const Segment &segment, bool atEnd = true)
+{
+    if (qFuzzyIsNull(segment.line.length()))
+    {
+        return QLineF(PointToQPointF(segment.line.p2), PointToQPointF(segment.line.p2) + QPointF(1.0, 0.0));
+    }
+    if (segment.isArc)
+    {
+        const QPointF pt1 = PointToQPointF(segment.center);
+        const QPointF pt2 = PointToQPointF(atEnd ? segment.line.p2 : segment.line.p1);
+        const QLineF normalVector = QLineF(QPointF(), segment.orientation != Segment::Clockwise ? (pt1 - pt2) : (pt2 - pt1)).normalVector();
+        const QLineF tangent = QLineF(pt2, pt2 + normalVector.p2());
+        // qDebug() << "SMALL:" << pt1 << pt2 << normalVector << tangent << tangent.angle();
+        return tangent;
+    }
+    else
+    {
+        const QPointF pt1 = PointToQPointF(segment.line.p1);
+        const QPointF pt2 = PointToQPointF(segment.line.p2);
+        const QLineF tangent = QLineF(pt2, pt2 + (pt2 - pt1));
+        // qDebug() << "SMALL:" << pt1 << pt2 << tangent << tangent.angle();
+        return tangent;
+    }
+}
+
 Segment::Orientation Contour::orientation() const
 {
     if (segments.empty())
@@ -62,33 +103,35 @@ Segment::Orientation Contour::orientation() const
     double totalAngle = 0.0;
     for (std::list<Segment>::const_iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
     {
-        const QLineF a = LineToQLineF(prev->line);
-        const QLineF b = LineToQLineF(it->line);
-        double angle = a.angleTo(b);
-        if (qFuzzyCompare(angle, 180.0))
+        const QLineF a = GetTangent(*prev);
+        const QLineF b = it->isArc ? GetTangent(*it, false) : a;
+        const QLineF c = GetTangent(*it);
+        double angle1 = GetAngleBetween(a, b);
+        double angle2 = GetAngleBetween(b, c);
+        if (angle1 > 180.0)
+            angle1 -= 360.0;
+        if (it->isArc)
         {
-            if (it->isArc)
-            {
-                angle = it->orientation == Segment::Clockwise ? 180.0 : -180.0;
-            }
-            else if (prev->isArc)
-            {
-                angle = prev->orientation == Segment::Clockwise ? 180.0 : -180.0;
-            }
+            if (angle2 > 0.0 && it->orientation == Segment::Clockwise)
+                angle2 -= 360.0;
+            else if (angle2 < 0.0 && it->orientation != Segment::Clockwise)
+                angle2 += 360.0;
         }
-        else if (angle > 180.0)
+        else
         {
-            angle -= 360.0;
+            if (angle2 > 180.0)
+                angle2 -= 360.0;
         }
+        const double angle = angle1 + angle2;
         totalAngle += angle;
     }
     if (qFuzzyIsNull(totalAngle))
     {
         qDebug() << "WARNING: degenerate Contour without orientation:" << *this;
     }
-    else if (totalAngle > 360.5 || totalAngle < -360.5)
+    else if (qAbs(qAbs(totalAngle) - 360.0) > 0.1)
     {
-        qDebug() << "WARNING: non +/- 360 degree Contour!" << *this;
+        qDebug() << "WARNING: non +/- 360 degree Contour! Total angle:" << totalAngle << *this;
     }
     // TODO let Qt know that angleTo() gives a positive angle for clockwise not counter-clockwise when considering Y+ as upwards not downwards on a screen
     return totalAngle > 0.0 ? Segment::Clockwise : Segment::CounterClockwise;
@@ -118,6 +161,7 @@ bool Contour::isValid() const
     for (std::list<Segment>::const_iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
     {
         if (!FuzzyComparePoints(it->line.p1, prev->line.p2))
+        // if (it->line.p1 != prev->line.p2)
         {
             qDebug() << "INVALID:" << *prev << "to " << *it;
             return false;

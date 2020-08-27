@@ -160,13 +160,13 @@ TopoDS_Face ShapeToTopoDS_Face(const LineArcGeometry::Shape &shape)
         qDebug() << "WARNING: converting an empty Shape to an undefined TopoDS_Face";
         return TopoDS_Face();
     }
-    const bool boundary_needs_reversal = (shape.boundary.orientation() == LineArcGeometry::Segment::Clockwise);
+    const bool boundary_needs_reversal = (shape.boundary.orientation() != LineArcGeometry::Segment::Clockwise);
     const LineArcGeometry::Contour fixed_boundary = boundary_needs_reversal ? shape.boundary.reversed() : shape.boundary;
     TopoDS_Wire boundary = ContourToTopoDS_Wire(fixed_boundary);
     BRepBuilderAPI_MakeFace builder(gp_Pln(), boundary, true);
     for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
     {
-        const bool hole_needs_reversal = (hole_it->orientation() != LineArcGeometry::Segment::Clockwise);
+        const bool hole_needs_reversal = (hole_it->orientation() == LineArcGeometry::Segment::Clockwise);
         const LineArcGeometry::Contour fixed_hole = hole_needs_reversal ? hole_it->reversed() : *hole_it;
         builder.Add(ContourToTopoDS_Wire(fixed_hole));
     }
@@ -218,7 +218,7 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
         curve->D0(t_start, p1);
         curve->D0((t_start + t_end)/2.0, pm);
         curve->D0(t_end, p2);
-        //qDebug() << "WALKING:" << gp_PntToPoint(p1) << "->" << gp_PntToPoint(p2) << "thru" << gp_PntToPoint(p3) << "orient=" << edge.Orientation();
+        // qDebug() << "WALKING:" << gp_PntToPoint(p1) << "->" << gp_PntToPoint(p2) << "thru" << gp_PntToPoint(pm) << "orient=" << edge.Orientation();
 #if 0
         const gp_Trsf Tr = L.Transformation();
         if (Tr.Form() != gp_Identity)
@@ -247,7 +247,7 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
         }
 #endif
         const LineArcGeometry::Line line(LineArcGeometry::Point(p1.X(), p1.Y()), LineArcGeometry::Point(p2.X(), p2.Y()));
-        const bool zeroLengthLine = (line.p1 == line.p2); // (line.length() < 0.0001);
+        const bool zeroLengthLine = qFuzzyIsNull(line.length());
         // qDebug() << "PROCESSING" << line << (curve->DynamicType() == STANDARD_TYPE(Geom_Line));
         if (curve->DynamicType() == STANDARD_TYPE(Geom_Line))
         {
