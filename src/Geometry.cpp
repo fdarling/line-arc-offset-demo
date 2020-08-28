@@ -10,6 +10,9 @@
 #include <cmath>
 #include <algorithm>
 #include <utility>
+#include <cassert>
+
+#define USE_AREA_METHOD
 
 namespace LineArcGeometry {
 
@@ -52,49 +55,95 @@ Point Segment::midPoint() const
     return Point(qpt3.x(), qpt3.y());
 }
 
+#ifndef USE_AREA_METHOD
 // https://stackoverflow.com/questions/14066933/direct-way-of-computing-clockwise-angle-between-2-vectors/16544330#16544330
-static double GetAngleBetween(const QLineF &a, const QLineF &b)
+static double GetAngleBetween(const Line &a, const Line &b)
 {
-    const QPointF da = (a.p2() - a.p1());
-    const QPointF db = (b.p2() - b.p1());
-    const double x1 = da.x();
-    const double y1 = da.y();
-    const double x2 = db.x();
-    const double y2 = db.y();
+    const Point da = (a.p2 - a.p1);
+    const Point db = (b.p2 - b.p1);
+    const double x1 = da.x;
+    const double y1 = da.y;
+    const double x2 = db.x;
+    const double y2 = db.y;
     const double dot = x1*x2 + y1*y2;
     const double det = x1*y2 - y1*x2;
     const double angle = atan2(det, dot);
     return angle*180.0/M_PI;
 }
 
+static Line GetNormalVector(const Line &line)
+{
+    const Point delta = line.p2 - line.p1;
+    return Line(line.p1, Point(delta.y, -delta.x));
+}
+
 // NOTE: not normalized (doesn't need to be for angle measurement)
-static QLineF GetTangent(const Segment &segment, bool atEnd = true)
+static Line GetTangent(const Segment &segment, bool atEnd = true)
 {
     if (qFuzzyIsNull(segment.line.length()))
     {
-        return QLineF(PointToQPointF(segment.line.p2), PointToQPointF(segment.line.p2) + QPointF(1.0, 0.0));
+        return Line(segment.line.p2, segment.line.p2 + Point(1.0, 0.0));
     }
     if (segment.isArc)
     {
-        const QPointF pt1 = PointToQPointF(segment.center);
-        const QPointF pt2 = PointToQPointF(atEnd ? segment.line.p2 : segment.line.p1);
-        const QLineF normalVector = QLineF(QPointF(), segment.orientation != Segment::Clockwise ? (pt1 - pt2) : (pt2 - pt1)).normalVector();
-        const QLineF tangent = QLineF(pt2, pt2 + normalVector.p2());
-        // qDebug() << "SMALL:" << pt1 << pt2 << normalVector << tangent << tangent.angle();
+        const Point &pt1 = segment.center;
+        const Point &pt2 = atEnd ? segment.line.p2 : segment.line.p1;
+        const Line normalVector = GetNormalVector(Line(Point(), segment.orientation != Segment::Clockwise ? (pt1 - pt2) : (pt2 - pt1)));
+        const Line tangent(pt2, pt2 + normalVector.p2);
         return tangent;
     }
     else
     {
-        const QPointF pt1 = PointToQPointF(segment.line.p1);
-        const QPointF pt2 = PointToQPointF(segment.line.p2);
-        const QLineF tangent = QLineF(pt2, pt2 + (pt2 - pt1));
-        // qDebug() << "SMALL:" << pt1 << pt2 << tangent << tangent.angle();
+        const Point &pt1 = segment.line.p1;
+        const Point &pt2 = segment.line.p2;
+        const Line tangent(pt2, pt2 + (pt2 - pt1));
         return tangent;
     }
 }
+#endif // USE_AREA_METHOD
+
+#ifdef USE_AREA_METHOD
+// https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order/1165943#1165943
+static double AreaUnderneath(const Line &line)
+{
+    return (line.p2.x - line.p1.x)*(line.p2.y + line.p1.y);
+}
+
+static double AreaUnderneath(const Segment &segment)
+{
+    if (segment.isArc)
+    {
+        // TODO calculate area under arcs correctly, taking into X reversals
+        const Point midPoint = segment.midPoint();
+        return AreaUnderneath(Line(segment.line.p1, midPoint)) + AreaUnderneath(Line(midPoint, segment.line.p2));
+    }
+    return AreaUnderneath(segment.line);
+}
+
+static Segment::Orientation OrientationByArea(const Contour &contour)
+{
+    double totalArea = 0.0;
+    for (std::list<Segment>::const_iterator it = contour.segments.begin(); it != contour.segments.end(); ++it)
+    {
+        const double area = AreaUnderneath(*it);
+        totalArea += area;
+    }
+    if (qFuzzyIsNull(totalArea))
+    {
+        qDebug() << "WARNING: zero area Contour, can't take orientation! Total area:" << totalArea;
+    }
+    return totalArea > 0.0 ? Segment::CounterClockwise : Segment::Clockwise;
+}
+#endif // USE_AREA_METHOD
 
 Segment::Orientation Contour::orientation() const
 {
+#ifdef USE_AREA_METHOD
+    const Segment::Orientation answer1 = OrientationByArea(*this);
+    const Segment::Orientation answer2 = OrientationByArea(this->approximatedArcs());
+    assert(answer1 == answer2);
+    return answer1;
+#else
     if (segments.empty())
     {
         return Segment::Clockwise;
@@ -103,13 +152,16 @@ Segment::Orientation Contour::orientation() const
     double totalAngle = 0.0;
     for (std::list<Segment>::const_iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
     {
-        const QLineF a = GetTangent(*prev);
-        const QLineF b = it->isArc ? GetTangent(*it, false) : a;
-        const QLineF c = GetTangent(*it);
+        const Line a = GetTangent(*prev);
+        const Line b = it->isArc ? GetTangent(*it, false) : a;
+        const Line c = GetTangent(*it);
         double angle1 = GetAngleBetween(a, b);
         double angle2 = GetAngleBetween(b, c);
-        if (angle1 > 180.0)
-            angle1 -= 360.0;
+        if (qFuzzyCompare(qAbs(angle1), 180.0))
+        {
+            qDebug() << "WARNING: U-turn detected between adjacent Segments in Contour!";
+            // assert(false);
+        }
         if (it->isArc)
         {
             if (angle2 > 0.0 && it->orientation == Segment::Clockwise)
@@ -117,24 +169,20 @@ Segment::Orientation Contour::orientation() const
             else if (angle2 < 0.0 && it->orientation != Segment::Clockwise)
                 angle2 += 360.0;
         }
-        else
-        {
-            if (angle2 > 180.0)
-                angle2 -= 360.0;
-        }
         const double angle = angle1 + angle2;
         totalAngle += angle;
     }
     if (qFuzzyIsNull(totalAngle))
     {
-        qDebug() << "WARNING: degenerate Contour without orientation:" << *this;
+        qDebug() << "WARNING: degenerate Contour without orientation! Total angle:" << totalAngle << "Contour:" << *this;
     }
     else if (qAbs(qAbs(totalAngle) - 360.0) > 0.1)
     {
-        qDebug() << "WARNING: non +/- 360 degree Contour! Total angle:" << totalAngle << *this;
+        qDebug() << "WARNING: non +/- 360 degree Contour! Total angle:" << totalAngle << "Contour:" << *this;
     }
     // TODO let Qt know that angleTo() gives a positive angle for clockwise not counter-clockwise when considering Y+ as upwards not downwards on a screen
     return totalAngle > 0.0 ? Segment::Clockwise : Segment::CounterClockwise;
+#endif // USE_AREA_METHOD
 }
 
 template<typename T>
