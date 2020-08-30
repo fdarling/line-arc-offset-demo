@@ -130,11 +130,27 @@ static Segment::Orientation OrientationByArea(const Contour &contour)
     }
     if (qFuzzyIsNull(totalArea))
     {
-        qDebug() << "WARNING: zero area Contour, can't take orientation! Total area:" << totalArea;
+        qDebug() << "WARNING: zero area Contour, can't take orientation! Total area:" << totalArea << contour;
+        assert(false);
     }
     return totalArea > 0.0 ? Segment::CounterClockwise : Segment::Clockwise;
 }
 #endif // USE_AREA_METHOD
+
+CoordinateType Contour::area() const
+{
+    double totalArea = 0.0;
+    for (std::list<Segment>::const_iterator it = segments.begin(); it != segments.end(); ++it)
+    {
+        const double area = AreaUnderneath(*it);
+        totalArea += area;
+    }
+    if (qFuzzyIsNull(totalArea))
+    {
+        totalArea = 0.0;
+    }
+    return totalArea;
+}
 
 Segment::Orientation Contour::orientation() const
 {

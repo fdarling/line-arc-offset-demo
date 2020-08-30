@@ -93,6 +93,7 @@ std::list<Polygon_with_holes_2> MultiShapeToPolygonWithHolesList(const LineArcGe
 
 LineArcGeometry::Contour PolygonToContour(const Polygon_2 &polygon)
 {
+    assert(!polygon.is_empty());
     LineArcGeometry::Contour result;
     for (Polygon_2::Curve_const_iterator curve_it = polygon.curves_begin(); curve_it != polygon.curves_end(); ++curve_it)
     {
@@ -124,6 +125,11 @@ LineArcGeometry::Contour PolygonToContour(const Polygon_2 &polygon)
             result.segments.push_back(LineArcGeometry::Line(p1, p2));
         }
     }
+    if (result.area() == 0.0)
+    {
+        // qDebug() << "WARNING: generated zero-area Contour from non-zero area Polygon_2!" << result;
+        return LineArcGeometry::Contour();
+    }
     if (!result.isValid())
     {
         qDebug() << "ERROR: generated invalid Contour from Polygon_2!" << result;
@@ -134,9 +140,15 @@ LineArcGeometry::Contour PolygonToContour(const Polygon_2 &polygon)
 LineArcGeometry::Shape PolygonWithHolesToShape(const Polygon_with_holes_2 &polygon)
 {
     LineArcGeometry::Shape result(PolygonToContour(polygon.outer_boundary()));
+    if (result.boundary.segments.empty())
+        return result;
     for (Polygon_with_holes_2::Hole_const_iterator hole_it = polygon.holes_begin(); hole_it != polygon.holes_end(); ++hole_it)
     {
-        result.holes.push_back(PolygonToContour(*hole_it));
+        assert(!hole_it->is_empty());
+        assert(hole_it->size() != 0);
+        LineArcGeometry::Contour contour(PolygonToContour(*hole_it));
+        if (!contour.segments.empty())
+            result.holes.push_back(std::move(contour));
     }
     return result;
 }
@@ -146,7 +158,11 @@ LineArcGeometry::MultiShape PolygonWithHolesListToMultiShape(const std::list<Pol
     LineArcGeometry::MultiShape result;
     for (std::list<Polygon_with_holes_2>::const_iterator it = polygons.begin(); it != polygons.end(); ++it)
     {
-        result.shapes.push_back(PolygonWithHolesToShape(*it));
+        assert(!it->outer_boundary().is_empty());
+        assert(it->outer_boundary().size() != 0);
+        LineArcGeometry::Shape shape(PolygonWithHolesToShape(*it));
+        if (!shape.boundary.segments.empty())
+            result.shapes.push_back(std::move(shape));
     }
     return result;
 }

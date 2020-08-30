@@ -180,6 +180,7 @@ public:
         }
         return std::move(result);
     }
+    CoordinateType area() const;
     Segment::Orientation orientation() const;
     bool isValid() const;
     bool isCircle() const;

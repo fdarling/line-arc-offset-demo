@@ -319,6 +319,10 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
             return LineArcGeometry::Contour();
         }
     }
+    if (result.segments.empty()) // TODO this may be unnecessary
+        return result;
+    if (result.area() == 0.0)
+        return LineArcGeometry::Contour();
     result.fixSegmentOrientations(); // TODO stop having to do this!
     if (!result.isValid())
     {
@@ -338,6 +342,8 @@ LineArcGeometry::Shape TopoDS_ShapeToShape(const TopoDS_Shape &shape)
     {
         const TopoDS_Wire wire = TopoDS::Wire(wire_it.Current());
         const LineArcGeometry::Contour contour = TopoDS_WireToContour(wire);
+        if (contour.segments.empty())
+            continue;
 
         Bnd_Box box;
         BRepBndLib::Add(wire, box);
@@ -382,6 +388,8 @@ LineArcGeometry::MultiShape TopoDS_ShapeToMultiShape(const TopoDS_Shape &shape, 
         {
             const TopoDS_Wire wire = TopoDS::Wire(wire_it.Current());
             const LineArcGeometry::Contour contour = TopoDS_WireToContour(wire);
+            if (contour.segments.empty())
+                continue;
             result.shapes.push_back(LineArcGeometry::Shape(contour));
         }
         return result;
