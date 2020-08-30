@@ -138,7 +138,7 @@ static void SubtractPolylinesFromShapes(CavC_MultiShape &multiShape, const Polyl
                 // add hole
                 assert(subtractionResult.subtracted.size() == 1);
                 assert(subtractionResult.remaining.size() == 1);
-                itA->holes.insert(itA->holes.end(), std::move_iterator(subtractionResult.subtracted.begin()), std::move_iterator(subtractionResult.subtracted.end()));
+                itA->holes.insert(itA->holes.end(), std::make_move_iterator(subtractionResult.subtracted.begin()), std::make_move_iterator(subtractionResult.subtracted.end()));
             }
             else if (subtractionResult.remaining.empty())
             {
@@ -205,7 +205,7 @@ LineArcGeometry::MultiShape GeometryOperationsCavC::intersection(const LineArcGe
             // anything (because it wasn't before, and it's only smaller now)
             CavC_MultiShape intersected = IntersectCavC_Shapes(*itA, *itB);
             // save the results into the final product
-            result.insert(result.end(), std::move_iterator(intersected.begin()), std::move_iterator(intersected.end()));
+            result.insert(result.end(), std::make_move_iterator(intersected.begin()), std::make_move_iterator(intersected.end()));
         }
     }
     return CavC_MultiShapeToMultiShape(result);
@@ -234,7 +234,7 @@ static CavC_MultiShape SubtractCavC_Shapes(const CavC_Shape &a, const CavC_Shape
             assert(subtractionResult.remaining.size() == 1);
             assert(subtractionResult.subtracted.size() == 1);
             // result.back().holes.push_back(std::move(subtractionResult.subtracted.back()));
-            result.back().holes.insert(result.back().holes.end(), std::move_iterator(subtractionResult.subtracted.begin()), std::move_iterator(subtractionResult.subtracted.end()));
+            result.back().holes.insert(result.back().holes.end(), std::make_move_iterator(subtractionResult.subtracted.begin()), std::make_move_iterator(subtractionResult.subtracted.end()));
         }
     }
     // generate (A.boundary & B.holes) and combine with above results
@@ -277,7 +277,7 @@ LineArcGeometry::MultiShape GeometryOperationsCavC::difference(const LineArcGeom
                 // so effectively delete the original A shape and
                 // replace it with the smaller subtracted shapes
                 *itA = std::move(subtracted.front());
-                aa.insert(std::next(itA), std::move_iterator(std::next(subtracted.begin())), std::move_iterator(subtracted.end()));
+                aa.insert(std::next(itA), std::make_move_iterator(std::next(subtracted.begin())), std::make_move_iterator(subtracted.end()));
             }
         }
         ++itA;
