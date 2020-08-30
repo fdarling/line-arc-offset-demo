@@ -66,8 +66,8 @@ contains(GEOMETRY_ENGINES, occt) {
 		-lTKBRep \
 		-lTKShHealing
 	QMAKE_CXXFLAGS += \
-		-I/usr/local/include/opencascade \
 		-std=c++1z
+	INCLUDEPATH += /usr/local/include/opencascade
 	DEFINES += USING_OCCT
 }
 contains(GEOMETRY_ENGINES, cavc) {
@@ -79,8 +79,7 @@ contains(GEOMETRY_ENGINES, cavc) {
 		src/cavc/CavCQt.cpp \
 		src/cavc/GeometryCavC.cpp \
 		src/cavc/GeometryOperationsCavC.cpp
-	QMAKE_CXXFLAGS += \
-		-Ideps/CavalierContours/include
+	INCLUDEPATH += deps/CavalierContours/include
 	DEFINES += USING_CAVC
 }
 contains(GEOMETRY_ENGINES, clipper) {
