@@ -76,14 +76,14 @@ Polyline ContourToPolyline(const LineArcGeometry::Contour &contour)
 
 static LineArcGeometry::Contour EnsurePositive(const LineArcGeometry::Contour &contour)
 {
-    if (contour.orientation() == LineArcGeometry::Segment::Clockwise)
+    if (contour.orientation() == LineArcGeometry::Segment::CounterClockwise)
         return contour;
     return contour.reversed();
 }
 
 static LineArcGeometry::Contour EnsureNegative(const LineArcGeometry::Contour &contour)
 {
-    if (contour.orientation() != LineArcGeometry::Segment::Clockwise)
+    if (contour.orientation() == LineArcGeometry::Segment::Clockwise)
         return contour;
     return contour.reversed();
 }
@@ -121,20 +121,22 @@ static OffsetLoop ContourToBoundaryLoop(const LineArcGeometry::Contour &contour,
     return std::move(boundaryLoop);
 }
 
-OffsetLoopSet MultiShapeToOffsetLoopSet(const LineArcGeometry::MultiShape &multiShape)
+OffsetLoopSet MultiShapeToOffsetLoopSet(const LineArcGeometry::MultiShape &multiShape, bool reversed)
 {
     OffsetLoopSet result;
     for (std::list<LineArcGeometry::Shape>::const_iterator shape_it = multiShape.shapes.begin(); shape_it != multiShape.shapes.end(); ++shape_it)
     {
         const LineArcGeometry::Shape &shape = *shape_it;
         // add boundary
-        result.ccwLoops.push_back(ContourToBoundaryLoop(shape_it->boundary, true));
+        result.ccwLoops.push_back(ContourToBoundaryLoop(shape_it->boundary, !reversed));
         // add holes
         for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
         {
-            result.cwLoops.push_back(ContourToBoundaryLoop(*hole_it, false));
+            result.cwLoops.push_back(ContourToBoundaryLoop(*hole_it, reversed));
         }
     }
+    if (reversed)
+        std::swap(result.cwLoops, result.ccwLoops);
     return result;
 }
 

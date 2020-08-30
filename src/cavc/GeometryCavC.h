@@ -35,7 +35,7 @@ PVertex SegmentToPVertex(const LineArcGeometry::Segment &segment);
 Polyline ContourToPolyline(const LineArcGeometry::Contour &contour);
 CavC_Shape ShapeToCavC_Shape(const LineArcGeometry::Shape &shape);
 CavC_MultiShape MultiShapeToCavC_MultiShape(const LineArcGeometry::MultiShape &multiShape);
-OffsetLoopSet MultiShapeToOffsetLoopSet(const LineArcGeometry::MultiShape &multiShape);
+OffsetLoopSet MultiShapeToOffsetLoopSet(const LineArcGeometry::MultiShape &multiShape, bool reversed = false);
 LineArcGeometry::Point Vector2ToPoint(const Vector2 &vertex);
 LineArcGeometry::Segment PVerticesToSegment(const PVertex &v1, const PVertex &v2);
 LineArcGeometry::Contour PolylineToContour(const Polyline &polyline);
