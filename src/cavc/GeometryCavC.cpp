@@ -168,15 +168,24 @@ LineArcGeometry::Contour PolylineToContour(const Polyline &polyline)
         const LineArcGeometry::Segment segment(PVerticesToSegment(*prev, *it));
         result.segments.push_back(segment);
     }
+    if (result.area() == 0.0)
+    {
+        // qDebug() << "WARNING: generated zero-area Contour from zero-area Polyline!" << result;
+        return LineArcGeometry::Contour();
+    }
     return result;
 }
 
 LineArcGeometry::Shape CavC_ShapeToShape(const CavC_Shape &cavcShape)
 {
     LineArcGeometry::Shape result(PolylineToContour(cavcShape.boundary));
+    if (result.boundary.segments.empty())
+        return result;
     for (Polylines::const_iterator hole_it = cavcShape.holes.begin(); hole_it != cavcShape.holes.end(); ++hole_it)
     {
-        result.holes.push_back(PolylineToContour(*hole_it));
+        LineArcGeometry::Contour contour(PolylineToContour(*hole_it));
+        if (!contour.segments.empty())
+            result.holes.push_back(std::move(contour));
     }
     return result;
 }
