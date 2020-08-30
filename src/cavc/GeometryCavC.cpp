@@ -195,7 +195,9 @@ LineArcGeometry::MultiShape CavC_MultiShapeToMultiShape(const CavC_MultiShape &c
     LineArcGeometry::MultiShape result;
     for (CavC_MultiShape::const_iterator shape_it = cavcMultiShape.begin(); shape_it != cavcMultiShape.end(); ++shape_it)
     {
-        result.shapes.push_back(CavC_ShapeToShape(*shape_it));
+        LineArcGeometry::Shape shape(CavC_ShapeToShape(*shape_it));
+        if (!shape.boundary.segments.empty())
+            result.shapes.push_back(std::move(shape));
     }
     return result;
 }
