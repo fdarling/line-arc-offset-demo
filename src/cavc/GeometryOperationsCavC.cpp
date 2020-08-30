@@ -306,10 +306,11 @@ LineArcGeometry::MultiShape GeometryOperationsCavC::symmetricDifference(const Li
 LineArcGeometry::MultiShape GeometryOperationsCavC::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
 {
     // qDebug() << "GeometryOperationsCavC::offset()";
-    const OffsetLoopSet loopSet = MultiShapeToOffsetLoopSet(multiShape, radius > 0.0);
+    const bool reversed = radius > 0.0;
+    const OffsetLoopSet loopSet = MultiShapeToOffsetLoopSet(multiShape, reversed);
     cavc::ParallelOffsetIslands<CavC_Real> alg;
     cavc::OffsetLoopSet<double> offsetResult = alg.compute(loopSet, std::abs(radius)); // abs() is redundant, but we're doing it here to be explicit
-    return OffsetLoopSetToMultiShape(offsetResult); // NOTE: currently gives overlapping shapes, doesn't respect holes!
+    return OffsetLoopSetToMultiShape(offsetResult, reversed); // NOTE: currently gives overlapping shapes, doesn't respect holes!
 }
 
 } // namespace LineArcOffsetDemo

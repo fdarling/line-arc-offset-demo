@@ -191,19 +191,54 @@ LineArcGeometry::MultiShape CavC_MultiShapeToMultiShape(const CavC_MultiShape &c
     return result;
 }
 
-LineArcGeometry::MultiShape OffsetLoopSetToMultiShape(const OffsetLoopSet &loopSet)
+static bool PolylineContainsPolyline(const Polyline &outer, const Polyline &inner)
 {
-    LineArcGeometry::MultiShape result;
-    for (OffsetLoops::const_iterator it = loopSet.ccwLoops.begin(); it != loopSet.ccwLoops.end(); ++it)
+    assert(!outer.vertexes().empty());
+    assert(!inner.vertexes().empty());
+    return cavc::getWindingNumber(outer, inner.vertexes().front().pos()) != 0;
+}
+
+// TODO make this support a const shapes reference
+static CavC_MultiShape::iterator FindEnclosingPolyline(CavC_MultiShape &shapes, const Polyline &inner)
+{
+    CavC_MultiShape::iterator best = shapes.end();
+    for (CavC_MultiShape::iterator it = shapes.begin(); it != shapes.end(); ++it)
     {
-        result.shapes.push_back(LineArcGeometry::Shape(PolylineToContour(it->polyline)));
+        // check to see if the candidate contains the polyline
+        if (PolylineContainsPolyline(it->boundary, inner))
+        {
+            // make sure it's more inward than the last candidate
+            if (best == shapes.end() || PolylineContainsPolyline(best->boundary, it->boundary))
+            {
+                best = it;
+            }
+        }
     }
-    // TODO assign the holes to the shapes correctly!
-    for (OffsetLoops::const_iterator it = loopSet.cwLoops.begin(); it != loopSet.cwLoops.end(); ++it)
+    return best;
+}
+
+LineArcGeometry::MultiShape OffsetLoopSetToMultiShape(const OffsetLoopSet &loopSet, bool reversed)
+{
+    const OffsetLoops &boundaries = reversed ? loopSet.cwLoops : loopSet.ccwLoops;
+    const OffsetLoops &holes = reversed ? loopSet.ccwLoops : loopSet.cwLoops;
+    CavC_MultiShape result;
+    for (OffsetLoops::const_iterator it = boundaries.begin(); it != boundaries.end(); ++it)
     {
-        result.shapes.push_back(LineArcGeometry::Shape(PolylineToContour(it->polyline)));
+        CavC_Shape shape;
+        shape.boundary = it->polyline;
+        result.push_back(std::move(shape));
     }
-    return result;
+    for (OffsetLoops::const_iterator it = holes.begin(); it != holes.end(); ++it)
+    {
+        CavC_MultiShape::iterator enclosing = FindEnclosingPolyline(result, it->polyline);
+        if (enclosing == result.end())
+        {
+            qDebug() << "ERROR: could't find enclosing boundary Polyline for hole Polyline!";
+            assert(false);
+        }
+        enclosing->holes.push_back(it->polyline);
+    }
+    return CavC_MultiShapeToMultiShape(result);
 }
 
 } // namespace LineArcOffsetDemo

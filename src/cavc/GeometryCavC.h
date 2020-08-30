@@ -41,7 +41,7 @@ LineArcGeometry::Segment PVerticesToSegment(const PVertex &v1, const PVertex &v2
 LineArcGeometry::Contour PolylineToContour(const Polyline &polyline);
 LineArcGeometry::Shape CavC_ShapeToShape(const CavC_Shape &cavcShape);
 LineArcGeometry::MultiShape CavC_MultiShapeToMultiShape(const CavC_MultiShape &cavcMultiShape);
-LineArcGeometry::MultiShape OffsetLoopSetToMultiShape(const OffsetLoopSet &loopSet);
+LineArcGeometry::MultiShape OffsetLoopSetToMultiShape(const OffsetLoopSet &loopSet, bool reversed = false);
 
 } // namespace LineArcOffsetDemo
 
