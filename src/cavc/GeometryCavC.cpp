@@ -5,14 +5,16 @@
 
 namespace LineArcOffsetDemo {
 
+static const CavC_Real CAVC_SCALE_FACTOR = 1e4;
+
 LineArcGeometry::CoordinateType FromCavC(CavC_Real value)
 {
-    return value;
+    return value/CAVC_SCALE_FACTOR;
 }
 
 CavC_Real ToCavC(LineArcGeometry::CoordinateType value)
 {
-    return value;
+    return value*CAVC_SCALE_FACTOR;
 }
 
 Vector2 PointToVector2(const LineArcGeometry::Point &point)
