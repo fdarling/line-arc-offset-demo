@@ -252,6 +252,7 @@ LineArcGeometry::MultiShape OffsetLoopSetToMultiShape(const OffsetLoopSet &loopS
             CavC_Shape shape;
             shape.boundary = it->polyline;
             result.push_back(std::move(shape));
+            continue;
         }
         enclosing->holes.push_back(it->polyline);
     }
