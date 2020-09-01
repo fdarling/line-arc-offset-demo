@@ -120,7 +120,7 @@ static OffsetLoop ContourToBoundaryLoop(const LineArcGeometry::Contour &contour,
     assert(!polyline.vertexes().empty());
     StaticSpatialIndex spatialIndex(cavc::createApproxSpatialIndex(polyline));
     OffsetLoop boundaryLoop = {0, std::move(polyline), std::move(spatialIndex)};
-    return std::move(boundaryLoop);
+    return boundaryLoop;
 }
 
 OffsetLoopSet MultiShapeToOffsetLoopSet(const LineArcGeometry::MultiShape &multiShape, bool reversed)
@@ -246,8 +246,12 @@ LineArcGeometry::MultiShape OffsetLoopSetToMultiShape(const OffsetLoopSet &loopS
         CavC_MultiShape::iterator enclosing = FindEnclosingPolyline(result, it->polyline);
         if (enclosing == result.end())
         {
-            qDebug() << "ERROR: could't find enclosing boundary Polyline for hole Polyline!";
-            assert(false);
+            qDebug() << "WARNING: could't find enclosing boundary Polyline for hole Polyline!";
+            // assert(false);
+            // TODO deal with open polylines separately
+            CavC_Shape shape;
+            shape.boundary = it->polyline;
+            result.push_back(std::move(shape));
         }
         enclosing->holes.push_back(it->polyline);
     }

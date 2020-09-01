@@ -178,7 +178,7 @@ public:
         {
             result.segments.push_back(it->reversed());
         }
-        return std::move(result);
+        return result;
     }
     CoordinateType area() const;
     Segment::Orientation orientation() const;
