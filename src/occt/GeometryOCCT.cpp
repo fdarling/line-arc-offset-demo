@@ -219,33 +219,11 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
         curve->D0((t_start + t_end)/2.0, pm);
         curve->D0(t_end, p2);
         // qDebug() << "WALKING:" << gp_PntToPoint(p1) << "->" << gp_PntToPoint(p2) << "thru" << gp_PntToPoint(pm) << "orient=" << edge.Orientation();
-#if 0
-        const gp_Trsf Tr = L.Transformation();
-        if (Tr.Form() != gp_Identity)
-        {
-            qDebug() << "TRANSFORMING";
-            curve = Handle(Geom_Curve)::DownCast(curve->Transformed(Tr));
-        }
-        else
-            curve = Handle(Geom_Curve)::DownCast(curve->Copy());
         const bool isReversed = (edge.Orientation() == TopAbs_REVERSED);
         if (isReversed)
         {
-            qDebug() << "REVERSING";
-            const Standard_Real First = t_start;
-            const Standard_Real Last = t_end;
-            t_start = curve->ReversedParameter(Last);
-            t_end = curve->ReversedParameter(First);
-            curve->Reverse();
-        }
-#elif 0
-        const bool isReversed = (edge.Orientation() == TopAbs_REVERSED);
-        if (isReversed)
-        {
-            qDebug() << "$$$$$$$$$$$ REVERSING";
             std::swap(p1, p2);
         }
-#endif
         const LineArcGeometry::Line line(LineArcGeometry::Point(p1.X(), p1.Y()), LineArcGeometry::Point(p2.X(), p2.Y()));
         const bool zeroLengthLine = qFuzzyIsNull(line.length());
         // qDebug() << "PROCESSING" << line << (curve->DynamicType() == STANDARD_TYPE(Geom_Line));
@@ -323,7 +301,6 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
         return result;
     if (result.area() == 0.0)
         return LineArcGeometry::Contour();
-    result.fixSegmentOrientations(); // TODO stop having to do this!
     if (!result.isValid())
     {
         qDebug() << "ERROR: generated invalid Contour from TopoDS_Wire!" << result;
