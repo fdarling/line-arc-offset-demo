@@ -7,17 +7,30 @@
 
 #include <type_traits>
 
-#include <QtMath>
-#include <QLineF>
+#include <QtGlobal> // for qFuzzyIsNull()
 #include <QDebug>
 
 namespace LineArcOffsetDemo {
 
 // forward declarations
-static Polygon_2 construct_circle_polygon(const QPointF &center, double radius);
-static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoint, double width);
+static Polygon_2 construct_circle_polygon(const LineArcGeometry::Point &center, double radius);
+static Polygon_2 construct_wire(const LineArcGeometry::Point &startPoint, const LineArcGeometry::Point &endPoint, double width);
 // static std::list<Polygon_with_holes_2> construct_polygon_stroke(const Polygon_2 &polygon, double radius);
 static std::list<Polygon_with_holes_2> construct_polygon_stroke(const Polygon_with_holes_2 &polygon, double radius);
+
+// TODO consolidate these functions into another file
+static LineArcGeometry::Line GetNormalVector(const LineArcGeometry::Line &line)
+{
+    const LineArcGeometry::Point delta = line.p2 - line.p1;
+    return LineArcGeometry::Line(line.p1, LineArcGeometry::Point(delta.y, -delta.x));
+}
+
+static LineArcGeometry::Line GetUnitVector(const LineArcGeometry::Line &line)
+{
+    const double len = line.length();
+    // TODO should we even handle the zero length case?
+    return qFuzzyIsNull(len) ? line : LineArcGeometry::Line(line.p1/len, line.p2/len);
+}
 
 void addCurveToPolygon(Polygon_2 &polygon, const Curve_2 &curve)
 {
@@ -35,12 +48,12 @@ void addCurveToPolygon(Polygon_2 &polygon, const Curve_2 &curve)
 template <typename T>
 std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double radius_cap)
 {
-    const QPointF pt1(Point_2_To_QPointF(curve.source()));
-    const QPointF pt2(Point_2_To_QPointF(curve.target()));
-    if (qFuzzyIsNull(QLineF(pt1, pt2).length()))
+    const LineArcGeometry::Point startPoint(Point_2ToPoint(curve.source()));
+    const LineArcGeometry::Point   endPoint(Point_2ToPoint(curve.target()));
+    if (qFuzzyIsNull(LineArcGeometry::Line(startPoint, endPoint).length()))
     {
         std::list<Polygon_with_holes_2> res;
-        res.push_back(Polygon_with_holes_2(construct_circle_polygon(pt1, radius_cap)));
+        res.push_back(Polygon_with_holes_2(construct_circle_polygon(startPoint, radius_cap)));
         return res;
     }
     else if (curve.is_circular())
@@ -71,15 +84,10 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
         }
         //else
         {
-            const QPointF startPoint(Point_2_To_QPointF(curve.source()));
-            const QPointF   endPoint(Point_2_To_QPointF(curve.target()));
-            const QPointF center(Point_2_To_QPointF(circle.center()));
+            
+            const LineArcGeometry::Point center(Point_2ToPoint(circle.center()));
             const double radius = CGAL::sqrt(CGAL::to_double(circle.squared_radius()));
-            const double startAngle = qAtan2(CGAL::to_double(curve.source().y()), CGAL::to_double(curve.source().x()));
-                  double   endAngle = qAtan2(CGAL::to_double(curve.target().y()), CGAL::to_double(curve.target().x()));
-            if (endAngle < startAngle)
-                endAngle += 2.0*M_PI;
-            const bool debugging = false;//QLineF(center, QPointF(0.5, 0.5)).length() < 0.01;
+            const bool debugging = false;
             if (debugging)
             {
                 qDebug() << "ORIGINAL CURVE:";
@@ -88,16 +96,16 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
             }
             std::list<Polygon_with_holes_2> pieces;
             {
-                const QPointF middle_vec = QLineF(QPointF(0.0, 0.0), (endPoint - startPoint)).normalVector().unitVector().p2();
-                const QPointF source_offset = QLineF(QPointF(0.0, 0.0), startPoint - center).unitVector().p2()*radius_cap;
-                const QPointF target_offset = QLineF(QPointF(0.0, 0.0),   endPoint - center).unitVector().p2()*radius_cap;
-                const Point_2 source_out = QPointF_To_Point_2(startPoint + source_offset);
-                const Point_2 source_in  = QPointF_To_Point_2(startPoint - source_offset);
-                const Point_2 target_out = QPointF_To_Point_2(  endPoint + target_offset);
-                const Point_2 target_in  = QPointF_To_Point_2(  endPoint - target_offset);
+                const LineArcGeometry::Point middle_vec    = GetUnitVector(GetNormalVector(LineArcGeometry::Line(LineArcGeometry::Point(),   endPoint - startPoint))).p2;
+                const LineArcGeometry::Point source_offset = GetUnitVector(                LineArcGeometry::Line(LineArcGeometry::Point(), startPoint -     center)) .p2*radius_cap;
+                const LineArcGeometry::Point target_offset = GetUnitVector(                LineArcGeometry::Line(LineArcGeometry::Point(),   endPoint -     center)) .p2*radius_cap;
+                const Point_2 source_out = PointToPoint_2(startPoint + source_offset);
+                const Point_2 source_in  = PointToPoint_2(startPoint - source_offset);
+                const Point_2 target_out = PointToPoint_2(  endPoint + target_offset);
+                const Point_2 target_in  = PointToPoint_2(  endPoint - target_offset);
                 const double reverse_factor = (curve.orientation() == CGAL::COUNTERCLOCKWISE) ? 1.0 : -1.0; // TODO this seems backwards...
-                const Point_2 middle_out = QPointF_To_Point_2(center + middle_vec*(radius + radius_cap)*reverse_factor);
-                const Point_2 middle_in  = QPointF_To_Point_2(center + middle_vec*(radius - radius_cap)*reverse_factor);
+                const Point_2 middle_out = PointToPoint_2(center + middle_vec*(radius + radius_cap)*reverse_factor);
+                const Point_2 middle_in  = PointToPoint_2(center + middle_vec*(radius - radius_cap)*reverse_factor);
                 if (debugging)
                 {
                     qDebug() << "middle_vec:" << middle_vec;
@@ -173,7 +181,7 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
     else // if (curve.is_linear())
     {
         std::list<Polygon_with_holes_2> res;
-        res.push_back(Polygon_with_holes_2(construct_wire(pt1, pt2, radius_cap*2.0)));
+        res.push_back(Polygon_with_holes_2(construct_wire(startPoint, endPoint, radius_cap*2.0)));
         return res;
     }
 }
@@ -225,21 +233,20 @@ std::list<Polygon_with_holes_2> xorPolygonLists(const std::list<Polygon_with_hol
 }
 
 // Construct a polygon from a circle.
-static Polygon_2 construct_circle_polygon(const QPointF &center, double radius)
+static Polygon_2 construct_circle_polygon(const LineArcGeometry::Point &center, double radius)
 {
-    const Curve_2 curve(Circle_2(Point_2(center.x(), center.y()), CGAL::square(radius)));
+    const Curve_2 curve(Circle_2(PointToPoint_2(center), CGAL::square(radius)));
     Polygon_2 pgn;
     addCurveToPolygon(pgn, curve);
     return pgn;
 }
 
 // Construct a polygon from a circle.
-static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoint, double width)
+static Polygon_2 construct_wire(const LineArcGeometry::Point &startPoint, const LineArcGeometry::Point &endPoint, double width)
 {
     const double radius = width/2.0;
-    const QLineF line(startPoint, endPoint);
-    const QPointF offsetN = (QLineF(QPointF(), endPoint - startPoint).normalVector().unitVector()).p2()*radius;
-    const QPointF offsetP = (QLineF(QPointF(), endPoint - startPoint).unitVector()).p2()*radius;
+    const LineArcGeometry::Point offsetN = GetUnitVector(GetNormalVector(LineArcGeometry::Line(LineArcGeometry::Point(), endPoint - startPoint))).p2*radius;
+    const LineArcGeometry::Point offsetP = GetUnitVector(                LineArcGeometry::Line(LineArcGeometry::Point(), endPoint - startPoint)) .p2*radius;
 
     // Subdivide the circle into two x-monotone arcs.
     const bool debugging = false;
@@ -249,9 +256,9 @@ static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoi
         qDebug() << "---- GENERATING WIRE STROKE ----";
     }
     {
-      const Point_2 pt1(startPoint.x()-offsetN.x(), startPoint.y()-offsetN.y());
-      const Point_2 pt2(startPoint.x()-offsetP.x(), startPoint.y()-offsetP.y());
-      const Point_2 pt3(startPoint.x()+offsetN.x(), startPoint.y()+offsetN.y());
+      const Point_2 pt1(PointToPoint_2(startPoint - offsetN));
+      const Point_2 pt2(PointToPoint_2(startPoint - offsetP));
+      const Point_2 pt3(PointToPoint_2(startPoint + offsetN));
       const Curve_2 curve(pt1, pt2, pt3);
       if (debugging)
       {
@@ -260,8 +267,8 @@ static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoi
       addCurveToPolygon(pgn, curve);
     }
     {
-      const Point_2 pt1(startPoint.x()+offsetN.x(), startPoint.y()+offsetN.y());
-      const Point_2 pt2(  endPoint.x()+offsetN.x(),   endPoint.y()+offsetN.y());
+      const Point_2 pt1(PointToPoint_2(startPoint + offsetN));
+      const Point_2 pt2(PointToPoint_2(  endPoint + offsetN));
       const Curve_2 curve(pt1, pt2);
       if (debugging)
       {
@@ -270,9 +277,9 @@ static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoi
       addCurveToPolygon(pgn, curve);
     }
     {
-      const Point_2 pt1(  endPoint.x()+offsetN.x(),   endPoint.y()+offsetN.y());
-      const Point_2 pt2(  endPoint.x()+offsetP.x(),   endPoint.y()+offsetP.y());
-      const Point_2 pt3(  endPoint.x()-offsetN.x(),   endPoint.y()-offsetN.y());
+      const Point_2 pt1(PointToPoint_2(  endPoint + offsetN));
+      const Point_2 pt2(PointToPoint_2(  endPoint + offsetP));
+      const Point_2 pt3(PointToPoint_2(  endPoint - offsetN));
       const Curve_2 curve(pt1, pt2, pt3);
       if (debugging)
       {
@@ -281,8 +288,8 @@ static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoi
       addCurveToPolygon(pgn, curve);
     }
     {
-      const Point_2 pt1(  endPoint.x()-offsetN.x(),   endPoint.y()-offsetN.y());
-      const Point_2 pt2(startPoint.x()-offsetN.x(), startPoint.y()-offsetN.y());
+      const Point_2 pt1(PointToPoint_2(  endPoint - offsetN));
+      const Point_2 pt2(PointToPoint_2(startPoint - offsetN));
       const Curve_2 curve(pt1, pt2);
       if (debugging)
       {

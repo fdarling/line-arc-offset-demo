@@ -1,6 +1,7 @@
 #include "GeometryCGAL.h"
-#include "CGALQt.h"
 #include "../GeometryQt.h"
+
+#include <QDebug>
 
 namespace LineArcOffsetDemo {
 
