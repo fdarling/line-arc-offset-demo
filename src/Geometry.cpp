@@ -1,10 +1,6 @@
 #include "Geometry.h"
 #include "GeometryQt.h"
 
-// TODO stop using Qt in this file!
-#include <QPointF>
-#include <QLineF>
-// #include <QVector2D>
 #include <QDebug>
 
 #include <cmath>
@@ -22,7 +18,9 @@ static const CoordinateType TOLERANCE = 0.0001;
 
 CoordinateType Line::length() const
 {
-    return QLineF(PointToQPointF(p1), PointToQPointF(p2)).length();
+    const CoordinateType dx = p2.x - p1.x;
+    const CoordinateType dy = p2.y - p1.y;
+    return std::sqrt(dx*dx + dy*dy);
 }
 
 // https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line#Line_defined_by_two_points
@@ -39,7 +37,20 @@ CoordinateType Line::distanceTo(const Point &pt) const
 
 CoordinateType Segment::radius() const
 {
-    return QLineF(PointToQPointF(center), PointToQPointF(line.p2)).length();
+    return Line(center, line.p2).length();
+}
+
+static Line GetNormalVector(const Line &line)
+{
+    const Point delta = line.p2 - line.p1;
+    return Line(line.p1, Point(delta.y, -delta.x));
+}
+
+static Line GetUnitVector(const Line &line)
+{
+    const double len = line.length();
+    // TODO should we even handle the zero length case?
+    return qFuzzyIsNull(len) ? line : Line(line.p1/len, line.p2/len);
 }
 
 Point Segment::midPoint() const
@@ -48,13 +59,11 @@ Point Segment::midPoint() const
     {
         return (line.p1 + line.p2)/2.0;
     }
-    const QPointF qpt1(PointToQPointF(line.p1));
-    const QPointF qpt2(PointToQPointF(line.p2));
-    const QPointF qptc(PointToQPointF(center));
-    const QPointF offsetN = (QLineF(QPointF(), qpt2 - qpt1).normalVector().unitVector()).p2()*radius();
+
+    const Point offsetN = GetUnitVector(GetNormalVector(Line(Point(), line.p2 - line.p1))).p2*radius();
+    
     const double scalar = (orientation == LineArcGeometry::Segment::Clockwise) ? -1.0 : 1.0;
-    const QPointF qpt3(qptc + scalar*offsetN);
-    return Point(qpt3.x(), qpt3.y());
+    return Point(center + scalar*offsetN);
 }
 
 #ifndef USE_AREA_METHOD
@@ -71,12 +80,6 @@ static double GetAngleBetween(const Line &a, const Line &b)
     const double det = x1*y2 - y1*x2;
     const double angle = atan2(det, dot);
     return angle*180.0/M_PI;
-}
-
-static Line GetNormalVector(const Line &line)
-{
-    const Point delta = line.p2 - line.p1;
-    return Line(line.p1, Point(delta.y, -delta.x));
 }
 
 // NOTE: not normalized (doesn't need to be for angle measurement)
@@ -480,28 +483,28 @@ Contour ContourFromLineAndRadius(const Line &line, double radius)
 {
     Contour contour;
 
-    const QPointF startPoint(PointToQPointF(line.p1));
-    const QPointF   endPoint(PointToQPointF(line.p2));
-    const QPointF offsetN = (QLineF(QPointF(), endPoint - startPoint).normalVector().unitVector()).p2()*radius;
+    const Point &startPoint = line.p1;
+    const Point   &endPoint = line.p2;
+    const Point offsetN = GetUnitVector(GetNormalVector(Line(Point(), line.p2 - line.p1))).p2*radius;
 
     {
-        const Point pt1(startPoint.x()-offsetN.x(), startPoint.y()-offsetN.y());
-        const Point pt2(startPoint.x()+offsetN.x(), startPoint.y()+offsetN.y());
+        const Point pt1(startPoint - offsetN);
+        const Point pt2(startPoint + offsetN);
         contour.segments.push_back(Segment(Line(pt1, pt2), line.p1, Segment::CounterClockwise));
     }
     {
-        const Point pt1(startPoint.x()+offsetN.x(), startPoint.y()+offsetN.y());
-        const Point pt2(  endPoint.x()+offsetN.x(),   endPoint.y()+offsetN.y());
+        const Point pt1(startPoint + offsetN);
+        const Point pt2(  endPoint + offsetN);
         contour.segments.push_back(Line(pt1, pt2));
     }
     {
-        const Point pt1(  endPoint.x()+offsetN.x(),   endPoint.y()+offsetN.y());
-        const Point pt2(  endPoint.x()-offsetN.x(),   endPoint.y()-offsetN.y());
+        const Point pt1(  endPoint + offsetN);
+        const Point pt2(  endPoint - offsetN);
         contour.segments.push_back(Segment(Line(pt1, pt2), line.p2, Segment::CounterClockwise));
     }
     {
-        const Point pt1(  endPoint.x()-offsetN.x(),   endPoint.y()-offsetN.y());
-        const Point pt2(startPoint.x()-offsetN.x(), startPoint.y()-offsetN.y());
+        const Point pt1(  endPoint - offsetN);
+        const Point pt2(startPoint - offsetN);
         contour.segments.push_back(Line(pt1, pt2));
     }
 

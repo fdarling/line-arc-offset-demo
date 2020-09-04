@@ -24,9 +24,6 @@
 #include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
 
-// TODO stop using Qt in this file!
-#include <QLineF>
-#include <QVector2D>
 #include <QDebug>
 
 QT_BEGIN_NAMESPACE
