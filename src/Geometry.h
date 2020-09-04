@@ -137,6 +137,14 @@ public:
         isArc(true)
     {
     }
+    bool operator==(const Segment &other) const
+    {
+        return other.line == line && other.center == center && other.orientation == orientation;
+    };
+    bool operator!=(const Segment &other) const
+    {
+        return other.line != line || other.center != center || other.orientation != orientation;
+    }
     Segment reversed() const
     {
         return Segment(line.reversed(), center, (orientation == Clockwise) ? CounterClockwise : Clockwise, isArc);
@@ -171,6 +179,14 @@ public:
         segments(segs)
     {
     }
+    bool operator==(const Contour &other) const
+    {
+        return other.segments == segments;
+    }
+    bool operator!=(const Contour &other) const
+    {
+        return other.segments != segments;
+    }
     Contour reversed() const
     {
         Contour result;
@@ -186,6 +202,7 @@ public:
     bool isCircle() const;
     void fixSegmentOrientations();
     void fixSegmentEndpoints();
+    void removeShortSegments();
     Contour approximatedArcs() const;
     Contour arcsRecovered() const;
     std::list<Segment> segments;

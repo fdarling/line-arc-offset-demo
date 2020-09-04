@@ -98,33 +98,20 @@ LineArcGeometry::Contour PolygonToContour(const Polygon_2 &polygon)
     for (Polygon_2::Curve_const_iterator curve_it = polygon.curves_begin(); curve_it != polygon.curves_end(); ++curve_it)
     {
         const X_monotone_curve_2 &curve = *curve_it;
+        const LineArcGeometry::Point p1(Point_2ToPoint(curve.source()));
+        const LineArcGeometry::Point p2(Point_2ToPoint(curve.target()));
         if (curve.is_circular())
         {
             const LineArcGeometry::Point circleCenter(Point_2ToPoint(curve.supporting_circle().center()));
             const LineArcGeometry::Segment::Orientation orientation = (curve.orientation() == CGAL::CLOCKWISE) ? LineArcGeometry::Segment::Clockwise : LineArcGeometry::Segment::CounterClockwise;
-            QPointF  startPoint(Point_2_To_QPointF(curve.source()));
-            QPointF    endPoint(Point_2_To_QPointF(curve.target()));
-            const double lineLength = QLineF(startPoint, endPoint).length();
-            if (lineLength < 0.0001) // HACK, this is to fix some sort of rounding errors with .angle()...
-            {
-                const LineArcGeometry::Point p1(Point_2ToPoint(curve.source()));
-                const LineArcGeometry::Point p2(Point_2ToPoint(curve.target()));
-                result.segments.push_back(LineArcGeometry::Line(p1, p2));
-            }
-            else
-            {
-                const LineArcGeometry::Point p1(Point_2ToPoint(curve.source()));
-                const LineArcGeometry::Point p2(Point_2ToPoint(curve.target()));
-                result.segments.push_back(LineArcGeometry::Segment(LineArcGeometry::Line(p1, p2), circleCenter, orientation));
-            }
+            result.segments.push_back(LineArcGeometry::Segment(LineArcGeometry::Line(p1, p2), circleCenter, orientation));
         }
         else
         {
-            const LineArcGeometry::Point p1(Point_2ToPoint(curve.source()));
-            const LineArcGeometry::Point p2(Point_2ToPoint(curve.target()));
             result.segments.push_back(LineArcGeometry::Line(p1, p2));
         }
     }
+    result.removeShortSegments();
     if (result.area() == 0.0)
     {
         // qDebug() << "WARNING: generated zero-area Contour from non-zero area Polygon_2!" << result;

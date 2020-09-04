@@ -315,6 +315,38 @@ void Contour::fixSegmentEndpoints()
     }
 }
 
+void Contour::removeShortSegments()
+{
+    for (std::list<Segment>::iterator it = segments.begin(); it != segments.end();)
+    {
+        if (it->line.length() < TOLERANCE)
+        {
+            // save current startpoint
+            const Point &startPoint = it->line.p1;
+            // delete the current segment
+            segments.erase(it++);
+            // wrap around if necessary
+            const bool atEnd = (it == segments.end());
+            if (atEnd)
+                it = segments.begin();
+            // fix the next segment's start point
+            if (it != segments.end())
+            {
+                // TODO make sure we aren't creating a full circle, if so break it into two halves
+                it->line.p1 = startPoint;
+            }
+            // don't rerun the loop if we already examined all segments
+            if (atEnd)
+                break;
+        }
+        else
+        {
+            // move onward
+            ++it;
+        }
+    }
+}
+
 static void AddLineToContour(Contour &contour, const Point &pt1, const Point &pt2)
 {
     if (pt1 != pt2)
