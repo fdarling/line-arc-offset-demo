@@ -4,28 +4,20 @@
 #include <CGAL/Boolean_set_operations_2.h>
 #include <CGAL/Lazy_exact_nt.h>
 #include <CGAL/Polygon_2.h> // for transform()
-// #include <CGAL/Qt/Converter.h> // for CGAL::Qt::Converter<Kernel>
 
 #include <type_traits>
 
 #include <QtMath>
 #include <QLineF>
-#include <QRectF>
-// #include <QPainterPath>
 #include <QDebug>
 
 namespace LineArcOffsetDemo {
 
 // forward declarations
 static Polygon_2 construct_circle_polygon(const QPointF &center, double radius);
-// static Polygon_with_holes_2 construct_annulus_polygon(const QPointF &center, double radius_inner, double radius_outer);
-// static Polygon_2 construct_rect_polygon(const QRectF &rect);
 static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoint, double width);
 // static std::list<Polygon_with_holes_2> construct_polygon_stroke(const Polygon_2 &polygon, double radius);
 static std::list<Polygon_with_holes_2> construct_polygon_stroke(const Polygon_with_holes_2 &polygon, double radius);
-// static std::list<Polygon_with_holes_2> construct_polygon_offset(const Polygon_with_holes_2 &polygon, double radius);
-// static std::list<Polygon_with_holes_2> construct_thermal(const QPointF &center, double radius_inner, double isolation, double width);
-// static std::list<Polygon_with_holes_2> construct_thermal_negative(const QPointF &center, double radius_inner, double isolation, double width);
 
 void addCurveToPolygon(Polygon_2 &polygon, const Curve_2 &curve)
 {
@@ -184,122 +176,7 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
         res.push_back(Polygon_with_holes_2(construct_wire(pt1, pt2, radius_cap*2.0)));
         return res;
     }
-
-    // std::list<Polygon_with_holes_2> pieces;
-    /*pieces.push_back(Polygon_with_holes_2(construct_rainbow(centerPoint, startAngle, endAngle, radius, width)));
-    {
-        const QPointF pt1(centerPoint.x() +   endCos*radius_outer                      , centerPoint.y() +   endSin*radius_outer);
-        const QPointF pt2(centerPoint.x() +   endCos*radius       -   endSin*radius_cap, centerPoint.y() +   endSin*radius       + endCos*radius_cap);
-        const QPointF pt3(centerPoint.x() +   endCos*radius_inner                      , centerPoint.y() +   endSin*radius_inner);
-        const QPointF pt4(centerPoint.x() +   endCos*radius       +   endSin*radius_cap, centerPoint.y() +   endSin*radius       - endCos*radius_cap);
-        pieces.push_back(Polygon_with_holes_2(construct_four_point_circle(pt1, pt2, pt3, pt4)));
-    }
-    {
-        const QPointF pt1(centerPoint.x() + startCos*radius_outer                      , centerPoint.y() + startSin*radius_outer);
-        const QPointF pt2(centerPoint.x() + startCos*radius       - startSin*radius_cap, centerPoint.y() + startSin*radius       + startCos*radius_cap);
-        const QPointF pt3(centerPoint.x() + startCos*radius_inner                      , centerPoint.y() + startSin*radius_inner);
-        const QPointF pt4(centerPoint.x() + startCos*radius       + startSin*radius_cap, centerPoint.y() + startSin*radius       - startCos*radius_cap);
-        pieces.push_back(Polygon_with_holes_2(construct_four_point_circle(pt1, pt2, pt3, pt4)));
-    }*/
-    // return pieces;
-    // std::list<Polygon_with_holes_2> result;
-    // CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(result));
-    // return result;
 }
-
-/*template <typename T>
-void AddCurvesToPath(QPainterPath &path, const T &poly)
-{
-    for (auto curve_it = poly.curves_begin(); curve_it != poly.curves_end(); ++curve_it)
-    {
-        auto curve = *curve_it;
-        if (curve.is_circular())
-        {
-#if 0
-            // TODO use <CGAL/Qt/PainterOstream.h> class instead...
-            // NOTE: code ripped from https://github.com/CGAL/cgal/blob/master/Arrangement_on_surface_2/demo/Arrangement_on_surface_2/ArrangementGraphicsItem.h#L558
-            const auto &c = curve;
-            QPointF source(Point_2_To_QPointF(c.source()));
-            QPointF target(Point_2_To_QPointF(c.target()));
-            // if ( ! this->isProperOrientation( cc ) )
-            // {
-              // std::swap( source, target );
-            // }
-
-            QPointF circleCenter(Point_2_To_QPointF(c.supporting_circle().center()));
-
-            std::swap( source, target );
-            double asource = atan2( -(source - circleCenter).y(),
-                                    (source - circleCenter).x() );
-            double atarget = atan2( -(target - circleCenter).y(),
-                                    (target - circleCenter).x() );
-            double aspan = atarget - asource;
-            std::swap( source, target );
-
-            // CGAL::Qt::Converter< Kernel > convert; // not worth importing this class... bounding box is easy enough to calculate
-            const double radius = sqrt(CGAL::to_double(c.supporting_circle().squared_radius()));
-            const QRectF  circleRect(circleCenter.x() - radius, circleCenter.y() - radius, radius*2.0, radius*2.0);
-            // path.moveTo( source );
-            path.arcMoveTo( circleRect, asource * 180/M_PI);
-            path.arcTo( circleRect, asource * 180/M_PI, // path.arcTo( convert(c.supporting_circle().bbox()), asource * 180/M_PI,
-                        aspan * 180/M_PI );
-#else
-            auto circle = curve.supporting_circle();
-            const double radius = sqrt(CGAL::to_double(circle.squared_radius()));
-            const QPointF circleCenter(Point_2_To_QPointF(circle.center()));
-            const QRectF  circleRect(circleCenter.x() - radius, circleCenter.y() - radius, radius*2.0, radius*2.0);
-            QPointF  startPoint(Point_2_To_QPointF(curve.source()));
-            QPointF    endPoint(Point_2_To_QPointF(curve.target()));
-            if (curve.orientation() != CGAL::CLOCKWISE)
-            {
-                qSwap(startPoint, endPoint);
-            }
-            const double startAngle = QLineF(circleCenter, startPoint).angle();
-            const double   endAngle = QLineF(circleCenter,   endPoint).angle();
-            // const double sweepAngle = endAngle - startAngle;
-            const double sweepAngle = QLineF(circleCenter, startPoint).angleTo(QLineF(circleCenter, endPoint));
-            // if (path.elementCount() == 0)
-            const double lineLength = QLineF(startPoint, endPoint).length();
-            // if (false)
-            if (lineLength < 0.0001) // HACK, this is to fix some sort of rounding errors with .angle()...
-            {
-                path.moveTo(startPoint);
-                path.lineTo(endPoint);
-            }
-            else
-            {
-                // if (lineLength < 0.0001)
-                // {
-                // path.arcMoveTo(circleRect.translated(QPointF(0.01, 0.01)), startAngle);
-                // path.arcTo(circleRect.translated(QPointF(0.01, 0.01)), startAngle, sweepAngle);
-                // }
-                // else
-                // {
-                path.arcMoveTo(circleRect, startAngle);
-                path.arcTo(circleRect, startAngle, sweepAngle);
-                // }
-            }
-            const bool debugging = false;//QLineF(circleCenter, QPointF(0.5, 0.5)).length() <= 0.1;
-            if (debugging)
-            {
-                qDebug() << "------------" << "swapped" << (curve.orientation() != CGAL::CLOCKWISE) << "Xeq" << (startPoint.x() == endPoint.x()) << "Yeq" << (startPoint.y() == endPoint.y()) << "Peq" << (startPoint == endPoint) << "length:" << QLineF(startPoint, endPoint).length();
-                qDebug() << "C" << circleCenter << "S" << startPoint << "T" << endPoint << "R" << radius;
-                qDebug() << "path.arcTo():" << circleRect << startAngle << sweepAngle << "end" << endAngle;
-                qDebug() << "S qAtan2():" << qAtan2(startPoint.y() - circleCenter.y(), startPoint.x() - circleCenter.x());
-                qDebug() << "T qAtan2():" << qAtan2(endPoint.y() - circleCenter.y(), endPoint.x() - circleCenter.x());
-            }
-#endif
-        }
-        else
-        {
-            const QPointF  startPoint(Point_2_To_QPointF(curve.source()));
-            const QPointF    endPoint(Point_2_To_QPointF(curve.target()));
-            // if (path.elementCount() == 0)
-                path.moveTo(startPoint);
-            path.lineTo(endPoint);
-        }
-    }
-}*/
 
 std::list<Polygon_with_holes_2> subtractPolygonLists(const std::list<Polygon_with_holes_2> &a, const std::list<Polygon_with_holes_2> &b)
 {
@@ -355,32 +232,6 @@ static Polygon_2 construct_circle_polygon(const QPointF &center, double radius)
     addCurveToPolygon(pgn, curve);
     return pgn;
 }
-
-/*static Polygon_with_holes_2 construct_annulus_polygon(const QPointF &center, double radius_inner, double radius_outer)
-{
-    const Polygon_2 outerCircle = construct_circle_polygon(center, radius_outer);
-    const Polygon_2 innerCircle = construct_circle_polygon(center, radius_inner);
-
-    std::list<Polygon_with_holes_2> res;
-    CGAL::difference(outerCircle, innerCircle, std::back_inserter(res));
-    return res.front();
-}*/
-
-// Construct a polygon from a circle.
-/*static Polygon_2 construct_rect_polygon(const QRectF &rect)
-{
-    const Point_2 p1(rect.left() , rect.top());
-    const Point_2 p2(rect.right(), rect.top());
-    const Point_2 p3(rect.right(), rect.bottom());
-    const Point_2 p4(rect.left() , rect.bottom());
-
-    Polygon_2 pgn;
-    pgn.push_back(X_monotone_curve_2(p1, p2));
-    pgn.push_back(X_monotone_curve_2(p2, p3));
-    pgn.push_back(X_monotone_curve_2(p3, p4));
-    pgn.push_back(X_monotone_curve_2(p4, p1));
-    return pgn;
-}*/
 
 // Construct a polygon from a circle.
 static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoint, double width)
@@ -442,142 +293,6 @@ static Polygon_2 construct_wire(const QPointF &startPoint, const QPointF &endPoi
     return pgn;
 }
 
-/*
-
-// WORKING CODE, but was just for proof of concept, uses awkward parameters
-
-Polygon_2 construct_rainbow(const QPointF &centerPoint, double startAngle, double endAngle, double radius, double width)
-{
-    const double avgAngle = (startAngle + endAngle)/2.0;
-    const double radius_outer = radius + width/2.0;
-    const double radius_inner = std::max(0.0, radius - width/2.0);
-
-    const double startCos = qCos(startAngle);
-    const double startSin = qSin(startAngle);
-    const double avgCos = qCos(avgAngle);
-    const double avgSin = qSin(avgAngle);
-    const double endCos = qCos(endAngle);
-    const double endSin = qSin(endAngle);
-
-    // Subdivide the circle into two x-monotone arcs.
-    Traits_2 traits;
-    std::list<CGAL::Object> objects;
-    {
-        Point_2 pt1(centerPoint.x() + startCos*radius_outer, centerPoint.y() + startSin*radius_outer);
-        Point_2 pt2(centerPoint.x() +   avgCos*radius_outer, centerPoint.y() +   avgSin*radius_outer);
-        Point_2 pt3(centerPoint.x() +   endCos*radius_outer, centerPoint.y() +   endSin*radius_outer);
-        Curve_2 curve(pt1, pt2, pt3);
-        traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
-    }
-    {
-      Point_2 pt1(centerPoint.x() +   endCos*radius_outer, centerPoint.y() +   endSin*radius_outer);
-      Point_2 pt2(centerPoint.x() +   endCos*radius_inner, centerPoint.y() +   endSin*radius_inner);
-      Curve_2 curve(pt1, pt2);
-      traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
-    }
-    if (radius_inner != 0.0)
-    {
-        Point_2 pt1(centerPoint.x() +   endCos*radius_inner, centerPoint.y() +   endSin*radius_inner);
-        Point_2 pt2(centerPoint.x() +   avgCos*radius_inner, centerPoint.y() +   avgSin*radius_inner);
-        Point_2 pt3(centerPoint.x() + startCos*radius_inner, centerPoint.y() + startSin*radius_inner);
-        Curve_2 curve(pt1, pt2, pt3);
-        traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
-    }
-    {
-      Point_2 pt1(centerPoint.x() + startCos*radius_inner, centerPoint.y() + startSin*radius_inner);
-      Point_2 pt2(centerPoint.x() + startCos*radius_outer, centerPoint.y() + startSin*radius_outer);
-      Curve_2 curve(pt1, pt2);
-      traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
-    }
-    // Construct the polygon.
-    Polygon_2 pgn;
-    X_monotone_curve_2 arc;
-    std::list<CGAL::Object>::iterator iter;
-    for (iter = objects.begin(); iter != objects.end(); ++iter)
-    {
-        CGAL::assign (arc, *iter);
-        pgn.push_back (arc);
-    }
-    return pgn;
-}
-
-Polygon_2 construct_four_point_circle(const QPointF &a, const QPointF &b, const QPointF &c, const QPointF &d)
-{
-    // Subdivide the circle into two x-monotone arcs.
-    Traits_2 traits;
-    std::list<CGAL::Object> objects;
-    {
-        Point_2 pt1(a.x(), a.y());
-        Point_2 pt2(b.x(), b.y());
-        Point_2 pt3(c.x(), c.y());
-        Curve_2 curve(pt1, pt2, pt3);
-        traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
-    }
-    {
-        Point_2 pt1(c.x(), c.y());
-        Point_2 pt2(d.x(), d.y());
-        Point_2 pt3(a.x(), a.y());
-        Curve_2 curve(pt1, pt2, pt3);
-        traits.make_x_monotone_2_object() (curve, std::back_inserter(objects));
-    }
-    // Construct the polygon.
-    Polygon_2 pgn;
-    X_monotone_curve_2 arc;
-    std::list<CGAL::Object>::iterator iter;
-    for (iter = objects.begin(); iter != objects.end(); ++iter)
-    {
-        CGAL::assign (arc, *iter);
-        pgn.push_back (arc);
-    }
-    return pgn;
-}
-
-std::list<Polygon_with_holes_2> construct_capped_rainbow(const QPointF &centerPoint, double startAngle, double endAngle, double radius, double width)
-{
-    const double radius_cap   = width/2.0;
-    const double radius_outer = radius + radius_cap;
-    const double radius_inner = radius - radius_cap; // NO MAX here!!! NOT std::max(0.0, radius - radius_cap);
-
-    const double startCos = qCos(startAngle);
-    const double startSin = qSin(startAngle);
-    const double endCos = qCos(endAngle);
-    const double endSin = qSin(endAngle);
-
-    std::list<Polygon_with_holes_2> pieces;
-    // pieces.push_back(Polygon_with_holes_2(construct_rainbow(centerPoint, startAngle, endAngle, radius, width)));
-    {
-        const QPointF pt1(centerPoint.x() +   endCos*radius_outer                      , centerPoint.y() +   endSin*radius_outer);
-        const QPointF pt2(centerPoint.x() +   endCos*radius       -   endSin*radius_cap, centerPoint.y() +   endSin*radius       + endCos*radius_cap);
-        const QPointF pt3(centerPoint.x() +   endCos*radius_inner                      , centerPoint.y() +   endSin*radius_inner);
-        const QPointF pt4(centerPoint.x() +   endCos*radius       +   endSin*radius_cap, centerPoint.y() +   endSin*radius       - endCos*radius_cap);
-        pieces.push_back(Polygon_with_holes_2(construct_four_point_circle(pt1, pt2, pt3, pt4)));
-    }
-    {
-        const QPointF pt1(centerPoint.x() + startCos*radius_outer                      , centerPoint.y() + startSin*radius_outer);
-        const QPointF pt2(centerPoint.x() + startCos*radius       - startSin*radius_cap, centerPoint.y() + startSin*radius       + startCos*radius_cap);
-        const QPointF pt3(centerPoint.x() + startCos*radius_inner                      , centerPoint.y() + startSin*radius_inner);
-        const QPointF pt4(centerPoint.x() + startCos*radius       + startSin*radius_cap, centerPoint.y() + startSin*radius       - startCos*radius_cap);
-        pieces.push_back(Polygon_with_holes_2(construct_four_point_circle(pt1, pt2, pt3, pt4)));
-    }
-    // return pieces;
-    std::list<Polygon_with_holes_2> result;
-    CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(result));
-
-    return result;
-}*/
-
-/*static std::list<Polygon_with_holes_2> construct_polygon_stroke(const Polygon_2 &polygon, double radius)
-{
-    std::list<Polygon_with_holes_2> pieces;
-    for (auto curve_it = polygon.curves_begin(); curve_it != polygon.curves_end(); ++curve_it)
-    {
-        pieces.splice(pieces.end(), construct_grown_curve(*curve_it, radius));
-    }
-    std::list<Polygon_with_holes_2> result;
-    CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(result));
-    return result;
-}*/
-
 static std::list<Polygon_with_holes_2> construct_polygon_stroke(const Polygon_with_holes_2 &polygon, double radius)
 {
     std::list<Polygon_with_holes_2> pieces;
@@ -638,76 +353,5 @@ std::list<Polygon_with_holes_2> construct_polygon_list_offset(const std::list<Po
     const std::list<Polygon_with_holes_2> holesOnly = xorPolygonLists(innerHalf, polygons);
     return holesOnly;
 }
-
-/*static std::list<Polygon_with_holes_2> construct_thermal(const QPointF &center, double radius_inner, double isolation, double width)
-{
-    const double radius_outer = radius_inner + isolation;
-
-    std::list<Polygon_with_holes_2> polygons;
-    polygons.push_back(construct_annulus_polygon(center, radius_outer, radius_outer*2.0));
-    polygons.push_back(Polygon_with_holes_2(construct_circle_polygon(center, radius_inner)));
-    polygons.push_back(Polygon_with_holes_2(construct_rect_polygon(QRectF(center.x() - radius_outer*1.5, center.y() - width/2.0, radius_outer*3.0, width))));
-    polygons.push_back(Polygon_with_holes_2(construct_rect_polygon(QRectF(center.x() - width/2.0, center.y() - radius_outer*1.5, width, radius_outer*3.0))));
-
-    std::list<Polygon_with_holes_2> result;
-    CGAL::join(polygons.begin(), polygons.end(), std::back_inserter(result));
-
-    return result;
-}*/
-
-/*static std::list<Polygon_with_holes_2> construct_thermal_negative(const QPointF &center, double radius_inner, double isolation, double width)
-{
-    const double radius_outer = radius_inner + isolation;
-    std::list<Polygon_with_holes_2> beingCut;
-    beingCut.push_back(Polygon_with_holes_2(construct_circle_polygon(center, radius_outer)));
-
-    std::list<Polygon_2> cutters;
-    cutters.push_back(construct_circle_polygon(center, radius_inner));
-    cutters.push_back(construct_rect_polygon(QRectF(center.x() - radius_outer*2.0, center.y() - width/2.0, radius_outer*4.0, width)));
-    cutters.push_back(construct_rect_polygon(QRectF(center.x() - width/2.0, center.y() - radius_outer*2.0, width, radius_outer*4.0)));
-
-    std::list<Polygon_with_holes_2> result;
-    for (std::list<Polygon_2>::const_iterator poly = cutters.begin(); poly != cutters.end(); ++poly)
-    {
-        result.clear();
-        for (std::list<Polygon_with_holes_2>::const_iterator poly_with_holes = beingCut.begin(); poly_with_holes != beingCut.end(); ++poly_with_holes)
-        {
-            CGAL::difference(*poly_with_holes, *poly, std::back_inserter(result));
-        }
-        beingCut = result;
-    }
-
-    return result;
-}*/
-
-////////////////////////////////////////////////////////////////////
-
-/*static void AddWire(QGraphicsScene *scene, const QLineF &line, double width)
-{
-    const double radius = width/2.0;
-    const QPointF offset = (QLineF(QPointF(), line.p2() - line.p1()).normalVector().unitVector()).p2()*radius;
-
-    // circle centers
-    // Point_2 start(startPoint.x(), startPoint.y());
-    // Point_2 end(endPoint.x(), endPoint.y());
-
-    // circles
-    // Circle_2 circle1(start, radius);
-    // Circle_2 circle2(end, radius);
-
-    // lines
-    const QLineF line1(line.p1() + offset, line.p2() + offset);
-    const QLineF line2(line.p1() - offset, line.p2() - offset);
-    QPainterPath path;
-    path.moveTo(line1.p1());
-    path.lineTo(line1.p2());
-    path.arcTo(QRectF(line.p2().x() - radius, line.p2().y() - radius, radius*2.0, radius*2.0), QLineF(QPointF(), offset).angle(), -180.0);
-    path.lineTo(line2.p1());
-    path.arcTo(QRectF(line.p1().x() - radius, line.p1().y() - radius, radius*2.0, radius*2.0), QLineF(QPointF(), -offset).angle(), -180.0);
-    path.closeSubpath();
-    scene->addPath(path, QPen(Qt::black, 0.0));
-    // Line_2 line1(Point_2(startPoint.x() + offset.x(), startPoint.y() + offset.y()), Point_2(endPoint.x() + offset.x(), endPoint.y() + offset.y()));
-    // Line_2 line2(Point_2(startPoint.x() - offset.x(), startPoint.y() - offset.y()), Point_2(endPoint.x() - offset.x(), endPoint.y() - offset.y()));
-}*/
 
 } // namespace LineArcOffsetDemo
