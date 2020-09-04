@@ -50,6 +50,7 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
 {
     const LineArcGeometry::Point startPoint(Point_2ToPoint(curve.source()));
     const LineArcGeometry::Point   endPoint(Point_2ToPoint(curve.target()));
+    // treat short lines as a single point, which will grow to a circle
     if (qFuzzyIsNull(LineArcGeometry::Line(startPoint, endPoint).length()))
     {
         std::list<Polygon_with_holes_2> res;
@@ -59,7 +60,8 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
     else if (curve.is_circular())
     {
         const Circle_2 circle = curve.supporting_circle();
-        if constexpr (std::is_same<T, Curve_2>::value)
+        // a full circle grows to become an annulus (or at least a larger circle)
+        if constexpr (std::is_same<T, Curve_2>::value) // avoids using a non-existent is_full() method
         if (curve.is_full())
         {
             const double radius = CGAL::sqrt(CGAL::to_double(CGAL::sqrt(circle.squared_radius())));
@@ -82,7 +84,7 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
             CGAL::difference(outer, inner, std::back_inserter(result)); // TODO avoid use of expensive boolean operation
             return result;
         }
-        //else
+        // an arc grows into a "C" shape, possibly enclosing into an "O" shape, or even a circle-like shape.
         {
             
             const LineArcGeometry::Point center(Point_2ToPoint(circle.center()));
@@ -95,6 +97,7 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
                 qDebug() << "Constructing rainbow...";
             }
             std::list<Polygon_with_holes_2> pieces;
+            // construct flat-ended "rainbow" (pie slice of an annulus)
             {
                 const LineArcGeometry::Point middle_vec    = GetUnitVector(GetNormalVector(LineArcGeometry::Line(LineArcGeometry::Point(),   endPoint - startPoint))).p2;
                 const LineArcGeometry::Point source_offset = GetUnitVector(                LineArcGeometry::Line(LineArcGeometry::Point(), startPoint -     center)) .p2*radius_cap;
@@ -167,12 +170,15 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
                 }
                 pieces.push_back(Polygon_with_holes_2(pgn));
             }
+            // construct start point circle
             if (debugging)
                 qDebug() << "Constructing source circle...";
             pieces.push_back(Polygon_with_holes_2(construct_circle_polygon(startPoint, radius_cap)));
+            // construct end point circle
             if (debugging)
                 qDebug() << "Constructing end circle...";
             pieces.push_back(Polygon_with_holes_2(construct_circle_polygon(  endPoint, radius_cap)));
+            // use boolean union to combine all the pieces
             std::list<Polygon_with_holes_2> result;
             CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(result));
             return result;
@@ -180,6 +186,7 @@ std::list<Polygon_with_holes_2> construct_grown_curve(const T &curve, double rad
     }
     else // if (curve.is_linear())
     {
+        // construct a round-capped thick line
         std::list<Polygon_with_holes_2> res;
         res.push_back(Polygon_with_holes_2(construct_wire(startPoint, endPoint, radius_cap*2.0)));
         return res;
@@ -248,7 +255,6 @@ static Polygon_2 construct_wire(const LineArcGeometry::Point &startPoint, const 
     const LineArcGeometry::Point offsetN = GetUnitVector(GetNormalVector(LineArcGeometry::Line(LineArcGeometry::Point(), endPoint - startPoint))).p2*radius;
     const LineArcGeometry::Point offsetP = GetUnitVector(                LineArcGeometry::Line(LineArcGeometry::Point(), endPoint - startPoint)) .p2*radius;
 
-    // Subdivide the circle into two x-monotone arcs.
     const bool debugging = false;
     Polygon_2 pgn;
     if (debugging)
@@ -314,7 +320,6 @@ static std::list<Polygon_with_holes_2> construct_polygon_stroke(const Polygon_wi
             pieces.splice(pieces.end(), construct_grown_curve(*curve_it, radius));
         }
     }
-    // return pieces; // for debugging
     std::list<Polygon_with_holes_2> result;
     CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(result));
     return result;
@@ -348,7 +353,6 @@ std::list<Polygon_with_holes_2> construct_polygon_list_offset(const std::list<Po
     // combine all the strokes
     std::list<Polygon_with_holes_2> strokes;
     CGAL::join(pieces.begin(), pieces.end(), std::back_inserter(strokes));
-    // return strokes;
 
     // outset
     if (radius > 0.0)
@@ -356,7 +360,6 @@ std::list<Polygon_with_holes_2> construct_polygon_list_offset(const std::list<Po
 
     // inset
     const std::list<Polygon_with_holes_2> innerHalf = intersectPolygonLists(strokes, polygons);
-    // return innerHalf;
     const std::list<Polygon_with_holes_2> holesOnly = xorPolygonLists(innerHalf, polygons);
     return holesOnly;
 }
