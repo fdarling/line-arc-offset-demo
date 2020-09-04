@@ -297,6 +297,7 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
             return LineArcGeometry::Contour();
         }
     }
+    result.fixSegmentEndpoints();
     if (result.segments.empty()) // TODO this may be unnecessary
         return result;
     if (result.area() == 0.0)

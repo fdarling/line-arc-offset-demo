@@ -10,6 +10,8 @@
 #include <cmath>
 #include <algorithm>
 #include <utility>
+#include <iostream>
+#include <iomanip>
 #include <cassert>
 
 #define USE_AREA_METHOD
@@ -224,10 +226,11 @@ bool Contour::isValid() const
     const Segment *prev = &segments.back();
     for (std::list<Segment>::const_iterator it = segments.begin(); it != segments.end(); prev = &*it, ++it)
     {
-        if (!FuzzyComparePoints(it->line.p1, prev->line.p2))
-        // if (it->line.p1 != prev->line.p2)
+        // if (!FuzzyComparePoints(it->line.p1, prev->line.p2))
+        if (it->line.p1 != prev->line.p2)
         {
             qDebug() << "INVALID:" << *prev << "to " << *it;
+            std::cerr << "Full precision:" << std::setprecision(std::numeric_limits<CoordinateType>::max_digits10) << prev->line.p2.x << "," << prev->line.p2.y << " != " << it->line.p1.x << "," << it->line.p1.y << std::endl;
             return false;
         }
     }
@@ -305,11 +308,12 @@ void Contour::fixSegmentEndpoints()
         {
             if (it->isArc)
             {
-                it->line.p1 = prev->line.p2;
+                // TODO handle a possible issue with modifying consecutive arc segments
+                prev->line.p2 = it->line.p1;
             }
             else
             {
-                prev->line.p2 = it->line.p1;
+                it->line.p1 = prev->line.p2;
             }
         }
     }
