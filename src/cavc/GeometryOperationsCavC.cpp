@@ -310,7 +310,7 @@ LineArcGeometry::MultiShape GeometryOperationsCavC::offset(const LineArcGeometry
     const bool reversed = cavcRadius > 0.0;
     const OffsetLoopSet loopSet = MultiShapeToOffsetLoopSet(multiShape, reversed);
     cavc::ParallelOffsetIslands<CavC_Real> alg;
-    cavc::OffsetLoopSet<double> offsetResult = alg.compute(loopSet, std::abs(cavcRadius)); // abs() is redundant, but we're doing it here to be explicit
+    cavc::OffsetLoopSet<CavC_Real> offsetResult = alg.compute(loopSet, std::abs(cavcRadius)); // abs() is redundant, but we're doing it here to be explicit
     return OffsetLoopSetToMultiShape(offsetResult, reversed); // NOTE: currently gives overlapping shapes, doesn't respect holes!
 }
 
