@@ -10,7 +10,8 @@ MOC_DIR=build/moc
 # PRECOMPILED_HEADER = src/cgal/CGALWrapper.h
 
 # GEOMETRY_ENGINES += cgal
-GEOMETRY_ENGINES += occt
+# GEOMETRY_ENGINES += occt
+GEOMETRY_ENGINES += oce
 # GEOMETRY_ENGINES += cavc
 # GEOMETRY_ENGINES += clipper
 # GEOMETRY_ENGINES += boost
@@ -38,36 +39,33 @@ contains(GEOMETRY_ENGINES, cgal) {
 	# to avoid errors when running under valgrind:
 	DEFINES += CGAL_DISABLE_ROUNDING_MATH_CHECK=ON
 }
-contains(GEOMETRY_ENGINES, occt) {
+contains(GEOMETRY_ENGINES, occt)|contains(GEOMETRY_ENGINES, oce) {
 	HEADERS += \
 		src/occt/GeometryOCCT.h \
 		src/occt/GeometryOperationsOCCT.h
 	SOURCES += \
 		src/occt/GeometryOCCT.cpp \
 		src/occt/GeometryOperationsOCCT.cpp
+	contains(GEOMETRY_ENGINES, occt) {
+		LIBS += -L/usr/local/lib
+		INCLUDEPATH += /usr/local/include/opencascade
+	}
+	contains(GEOMETRY_ENGINES, oce) {
+		# LIBS += -L/usr/lib/x86_64-linux-gnu/
+		INCLUDEPATH += /usr/include/oce
+	}
 	LIBS += \
-		-std=c++11 \
-		-L/usr/local/lib \
 		-lTKBO \
+		-lTKBool \
 		-lTKBRep \
 		-lTKGeomBase \
-		-lTKGeomAlgo \
 		-lTKMath \
 		-lTKOffset \
-		-lTKPrim \
-		-lTKService \
 		-lTKTopAlgo \
-		-lTKSTL \
 		-lTKIGES \
-		-lTKHLR \
 		-lTKernel \
-		-lTKG2d \
 		-lTKG3d \
-		-lTKBRep \
 		-lTKShHealing
-	QMAKE_CXXFLAGS += \
-		-std=c++1z
-	INCLUDEPATH += /usr/local/include/opencascade
 	DEFINES += USING_OCCT
 }
 contains(GEOMETRY_ENGINES, cavc) {

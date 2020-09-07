@@ -23,6 +23,7 @@
 #include <gp_Circ.hxx>
 #include <gp_Pln.hxx>
 #include <gp_Pnt.hxx>
+#include <Bnd_Box.hxx>
 
 #include <QDebug>
 
@@ -58,16 +59,22 @@ TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
     BRepBuilderAPI_MakeWire wire_builder;
     for (std::list<LineArcGeometry::Segment>::const_iterator it = contour.segments.begin(); it != contour.segments.end(); ++it)
     {
+        const gp_Pnt p1 = PointTogp_Pnt(it->line.p1);
+        const gp_Pnt p2 = PointTogp_Pnt(it->line.p2);
+        if (p1.IsEqual(p2, Precision::Confusion()))
+        {
+            qDebug() << "WARNING: skipping short segment" << *it;
+            continue;
+        }
         TopoDS_Edge edge;
         if (it->isArc)
         {
             // TODO handle "full" circles which means the start/end points are coincident, currently LineArcGeometry::Segment isn't well defined for this though...
-            // qDebug() << "ContourToTopoDS_Wire: center" << it->center.x << "," << it->center.y << " --- from" << it->line.p1.x << "," << it->line.p1.y << "to" << it->line.p2.x << "," << it->line.p2.y << "ORIENT:" << it->orientation;
+            // qDebug() << "ContourToTopoDS_Wire: center" << it->center << "line" << it->line << "length" << it->line.length() << "ORIENT:" << it->orientation;
             const LineArcGeometry::Point midPoint = it->midPoint();
-            const gp_Pnt p1 = PointTogp_Pnt(it->line.p1);
-            const gp_Pnt p2 = PointTogp_Pnt(it->line.p2);
-            const gp_Pnt p3 = PointTogp_Pnt(midPoint);
-            const Handle(Geom_TrimmedCurve) arc = GC_MakeArcOfCircle(p1, p3, p2);
+            const gp_Pnt pm = PointTogp_Pnt(midPoint);
+
+            const Handle(Geom_TrimmedCurve) arc = GC_MakeArcOfCircle(p1, pm, p2);
             BRepBuilderAPI_MakeEdge edge_builder(arc);
             if (!edge_builder.IsDone())
             {
@@ -91,9 +98,9 @@ TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
             {
                 Standard_Real t_start, t_end;
                 const Handle(Geom_Curve) curve = BRep_Tool::Curve(edge, t_start, t_end);
-                gp_Pnt op1, op2, op3;
+                gp_Pnt op1, op2, opm;
                 curve->D0(t_start, op1);
-                curve->D0((t_end - t_start)/2.0, op3);
+                curve->D0((t_end - t_start)/2.0, opm);
                 curve->D0(t_end, op2);
                 if (edge.Orientation() == TopAbs_REVERSED)
                 {
@@ -102,19 +109,19 @@ TopoDS_Wire ContourToTopoDS_Wire(const LineArcGeometry::Contour &contour)
 
                 if (!FuzzyCompare_gp_Pnt(p1, op1) ||
                     !FuzzyCompare_gp_Pnt(p2, op2) ||
-                    !FuzzyCompare_gp_Pnt(p3, op3))
+                    !FuzzyCompare_gp_Pnt(pm, opm))
                 {
                     qDebug() << "ERROR: generated OCCT TopoDS_Edge didn't match source LineArcGeometry::Segment";
-                    qDebug() << "Input: " <<  p1 <<  p2 <<  p3;
-                    qDebug() << "Output:" << op1 << op2 << op3;
+                    qDebug() << "Input: " <<  p1 <<  p2 <<  pm;
+                    qDebug() << "Output:" << op1 << op2 << opm;
                 }
             }
         }
         else
         {
-            TopoDS_Vertex p1(BRepBuilderAPI_MakeVertex(PointTogp_Pnt(it->line.p1)));
-            TopoDS_Vertex p2(BRepBuilderAPI_MakeVertex(PointTogp_Pnt(it->line.p2)));
-            BRepBuilderAPI_MakeEdge edge_builder(p1, p2);
+            TopoDS_Vertex v1(BRepBuilderAPI_MakeVertex(PointTogp_Pnt(it->line.p1)));
+            TopoDS_Vertex v2(BRepBuilderAPI_MakeVertex(PointTogp_Pnt(it->line.p2)));
+            BRepBuilderAPI_MakeEdge edge_builder(v1, v2);
             if (!edge_builder.IsDone())
             {
                 qDebug() << "ERROR: BRepBuilderAPI_MakeEdge::IsDone() is false!";
@@ -160,12 +167,23 @@ TopoDS_Face ShapeToTopoDS_Face(const LineArcGeometry::Shape &shape)
     const bool boundary_needs_reversal = (shape.boundary.orientation() != LineArcGeometry::Segment::Clockwise);
     const LineArcGeometry::Contour fixed_boundary = boundary_needs_reversal ? shape.boundary.reversed() : shape.boundary;
     TopoDS_Wire boundary = ContourToTopoDS_Wire(fixed_boundary);
+    if (IsTopoDS_WireEmpty(boundary))
+    {
+        qDebug() << "WARNING: encountered empty/degenerate TopoDS_Wire boundary when converting a Shape to a TopoDS_Face!";
+        return TopoDS_Face();
+    }
     BRepBuilderAPI_MakeFace builder(gp_Pln(), boundary, true);
     for (std::list<LineArcGeometry::Contour>::const_iterator hole_it = shape.holes.begin(); hole_it != shape.holes.end(); ++hole_it)
     {
         const bool hole_needs_reversal = (hole_it->orientation() == LineArcGeometry::Segment::Clockwise);
         const LineArcGeometry::Contour fixed_hole = hole_needs_reversal ? hole_it->reversed() : *hole_it;
-        builder.Add(ContourToTopoDS_Wire(fixed_hole));
+        const TopoDS_Wire holeWire = ContourToTopoDS_Wire(fixed_hole);
+        if (IsTopoDS_WireEmpty(holeWire))
+        {
+            qDebug() << "WARNING: encountered empty/degenerate TopoDS_Wire hole when converting a Shape to a TopoDS_Face!";
+            continue;
+        }
+        builder.Add(holeWire);
     }
     if (!builder.IsDone())
     {
@@ -183,6 +201,11 @@ TopoDS_Face MultiShapeToTopoDS_Face(const LineArcGeometry::MultiShape &multiShap
     for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
     {
         TopoDS_Face face = ShapeToTopoDS_Face(*it);
+        if (IsTopoDS_ShapeEmpty(face))
+        {
+            qDebug() << "WARNING: generated an empty TopoDS_Face when converting a MultiShape to a composite TopoDS_Face!";
+            continue;
+        }
         topods_builder.Add(result, face);
     }
 
@@ -266,7 +289,7 @@ LineArcGeometry::Contour TopoDS_WireToContour(const TopoDS_Wire &wire)
                 const LineArcGeometry::Point center(cen.X(), cen.Y());
                 const LineArcGeometry::Point midPoint(pm.X(), pm.Y());
                 const LineArcGeometry::Segment::Orientation orientation = LineArcGeometry::OrientationReversed(LineArcGeometry::LinePointOrientation(line, midPoint));
-                
+
                 if (zeroLengthLine)
                 {
                     // treat concident start/end points as full circles and not as zero length arcs
@@ -376,6 +399,16 @@ LineArcGeometry::MultiShape TopoDS_ShapeToMultiShape(const TopoDS_Shape &shape, 
         result.shapes.push_back(shape);
     }
     return result;
+}
+
+bool IsTopoDS_WireEmpty(const TopoDS_Wire &wire)
+{
+    return !BRepTools_WireExplorer(wire).More();
+}
+
+bool IsTopoDS_ShapeEmpty(const TopoDS_Shape &shape)
+{
+    return !TopExp_Explorer(shape, TopAbs_WIRE).More();
 }
 
 } // namespace LineArcOffsetDemo

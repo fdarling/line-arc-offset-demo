@@ -24,6 +24,9 @@ LineArcGeometry::Shape TopoDS_ShapeToShape(const TopoDS_Shape &shape);
 LineArcGeometry::Shape TopoDS_FaceToShape(const TopoDS_Face &face);
 LineArcGeometry::MultiShape TopoDS_ShapeToMultiShape(const TopoDS_Shape &shape, bool useFaces = true);
 
+bool IsTopoDS_WireEmpty(const TopoDS_Wire &wire);
+bool IsTopoDS_ShapeEmpty(const TopoDS_Shape &shape);
+
 } // namespace LineArcOffsetDemo
 
 #endif // LINEARCOFFSETDEMO_GEOMETRYOCCT_H
