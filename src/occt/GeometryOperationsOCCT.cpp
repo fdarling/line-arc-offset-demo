@@ -20,6 +20,8 @@
 
 #include <IGESControl_Writer.hxx>
 
+#include <Standard_Version.hxx>
+
 #include <QDebug>
 
 // https://www.opencascade.com/content/remove-seams-after-fuse
@@ -47,21 +49,25 @@ template <typename BooleanOperationClass>
 static TopoDS_Shape DoBoolean(const TopoDS_Shape &shapeA, const TopoDS_Shape &shapeB)
 {
     BooleanOperationClass fuser(shapeA, shapeB);
+#if (OCC_VERSION_HEX >= 0x060800) // might actually require 6.9.0
     fuser.SetRunParallel(true);
+#endif
+#if (OCC_VERSION_HEX >= 0x060900)
     fuser.SetFuzzyValue(1.e-5);
-#if (OCC_VERSION_HEX >= 070000)
+#endif
+#if (OCC_VERSION_HEX >= 0x070000)
     fuser.SetNonDestructive(true);
 #endif
-#if (OCC_VERSION_HEX >= 072000)
+#if (OCC_VERSION_HEX >= 0x072000)
     fuser.SetGlue(BOPAlgo_GlueShift);
 #endif
-#if (OCC_VERSION_HEX >= 074000)
+#if (OCC_VERSION_HEX >= 0x074000)
     fuser.SetCheckInverted(true);
 #endif
 
     fuser.Build();
 
-#if (OCC_VERSION_HEX >= 072000)
+#if (OCC_VERSION_HEX >= 0x072000)
     if (fuser.HasErrors())
     {
         qDebug() << "BRepAlgoAPI_Fuse::HasErrors()";
@@ -70,7 +76,7 @@ static TopoDS_Shape DoBoolean(const TopoDS_Shape &shapeA, const TopoDS_Shape &sh
     }
 #endif
 
-#if (OCC_VERSION_HEX >= 072000)
+#if (OCC_VERSION_HEX >= 0x072000)
     if (fuser.HasWarnings())
     {
         qDebug() << "BRepAlgoAPI_Fuse::HasWarnings()";
