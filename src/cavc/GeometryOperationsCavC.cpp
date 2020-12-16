@@ -286,20 +286,33 @@ LineArcGeometry::MultiShape GeometryOperationsCavC::difference(const LineArcGeom
     return CavC_MultiShapeToMultiShape(aa);
 }
 
-// TODO
 LineArcGeometry::MultiShape GeometryOperationsCavC::symmetricDifference(const LineArcGeometry::MultiShape &multiShape)
 {
-    (void)multiShape;
     // qDebug() << "GeometryOperationsCavC::symmetricDifference()";
-    return LineArcGeometry::MultiShape();
+    LineArcGeometry::MultiShape result;
+    for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
+    {
+        if (result.shapes.empty())
+        {
+            result.shapes.push_back(*it);
+        }
+        else
+        {
+            LineArcGeometry::MultiShape cutter;
+            cutter.shapes.push_back(*it);
+            result = symmetricDifference(result, cutter);
+        }
+    }
+    return result;
 }
 
-// TODO
 LineArcGeometry::MultiShape GeometryOperationsCavC::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
-    (void)a; (void)b;
     // qDebug() << "GeometryOperationsCavC::symmetricDifference()";
-    return LineArcGeometry::MultiShape();
+    const LineArcGeometry::MultiShape a_minus_b = difference(a, b);
+    const LineArcGeometry::MultiShape b_minus_a = difference(b, a);
+    const LineArcGeometry::MultiShape joined = join(a_minus_b, b_minus_a);
+    return joined;
 }
 
 // TODO fix resulting geometry to respect holes
