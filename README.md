@@ -31,13 +31,13 @@ NOTE: the version numbers are for reference, other versions may work too.
 
 The relevant development packages to install on Ubuntu 18.04 (bionic) are:
 
-* qt5-default
-* libcgal-dev
-* libocct-modeling-algorithms-dev
-* liboce-modeling-dev
-* libpolyclipping-dev
-* libboost-dev
-* libgeos++-dev
+* `qt5-default`
+* `libcgal-dev`
+* `libocct-modeling-algorithms-dev` and `libocct-modeling-data-dev` and `libocct-data-exchange-dev`
+* `liboce-modeling-dev`
+* `libpolyclipping-dev`
+* `libboost-dev`
+* `libgeos++-dev`
 
 NOTE: libocct is only available on newer Debian/Ubuntu distributions, so you'll either have to use liboce instead, or compile/install OCCT manually (see the instructions further down).
 
