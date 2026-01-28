@@ -35,12 +35,11 @@ static LineArcGeometry::Line GetUnitVector(const LineArcGeometry::Line &line)
 void addCurveToPolygon(Polygon_2 &polygon, const Curve_2 &curve)
 {
     Traits_2 traits;
-    std::list<CGAL::Object> objects;
-    traits.make_x_monotone_2_object()(curve, std::back_inserter(objects));
-    X_monotone_curve_2 arc;
-    for (std::list<CGAL::Object>::iterator iter = objects.begin(); iter != objects.end(); ++iter)
+    std::vector<X_monotone_curve_2> segments;
+    traits.make_x_monotone_2_object()(curve, CGAL::dispatch_or_drop_output<X_monotone_curve_2>(std::back_inserter(segments)));
+
+    for (const X_monotone_curve_2 &arc : segments)
     {
-        CGAL::assign(arc, *iter);
         polygon.push_back(arc);
     }
 }
