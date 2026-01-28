@@ -33,7 +33,7 @@ class MainWindow : public QMainWindow
 public:
     MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
-protected slots:
+protected Q_SLOTS:
     void slot_FileNew();
     void slot_TreeContextMenuRequested(const QPoint &pos);
     void slot_TreeCurrentItemChanged(QTreeWidgetItem *current, QTreeWidgetItem *previous);

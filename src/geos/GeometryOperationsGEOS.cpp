@@ -5,7 +5,7 @@
 #include <geos/version.h>
 #include <geos/geom/PrecisionModel.h>
 #include <geos/operation/union/UnaryUnionOp.h>
-#include <geos/operation/overlay/OverlayOp.h>
+#include <geos/operation/overlayng/OverlayNG.h>
 #include <geos/operation/buffer/BufferOp.h>
 
 #include <memory>
@@ -14,60 +14,49 @@
 
 namespace LineArcOffsetDemo {
 
-#if (GEOS_VERSION_MAJOR <= 3) && (GEOS_VERSION_MINOR <= 6)
-typedef geos::geom::GeometryFactory::unique_ptr GeometryFactoryUniquePtr;
-#else
-typedef geos::geom::GeometryFactory::Ptr GeometryFactoryUniquePtr;
-#endif
-
 LineArcGeometry::MultiShape GeometryOperationsGEOS::identity(const LineArcGeometry::MultiShape &multiShape)
 {
     // qDebug() << "GeometryOperationsGEOS::identity()";
-    std::unique_ptr<geos::geom::PrecisionModel> pm(new geos::geom::PrecisionModel());
-    GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create(pm.get(), -1));
-    std::unique_ptr<geos::geom::MultiPolygon> multiPolygon(MultiShapeToMultiPolygon(multiShape, factory.get()));
+    const GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create());
+    const std::unique_ptr<geos::geom::MultiPolygon> multiPolygon(MultiShapeToMultiPolygon(multiShape, factory));
     return MultiPolygonToMultiShape(multiPolygon.get());
 }
 
 LineArcGeometry::MultiShape GeometryOperationsGEOS::join(const LineArcGeometry::MultiShape &multiShape)
 {
     // qDebug() << "GeometryOperationsGEOS::join()";
-    std::unique_ptr<geos::geom::PrecisionModel> pm(new geos::geom::PrecisionModel());
-    GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create(pm.get(), -1));
-    //const std::unique_ptr<GEOSGeometry> multiPolygon;
-    std::unique_ptr<geos::geom::Geometry> multiPolygon(MultiShapeToMultiPolygon(multiShape, factory.get()));
-    //const GEOSGeometry * const joined = GEOSUnion_r(multiPolygon);
-    std::unique_ptr<geos::geom::Geometry> joined(geos::operation::geounion::UnaryUnionOp::Union(*multiPolygon));
+    const GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create());
+    const std::unique_ptr<geos::geom::Geometry> multiPolygon(MultiShapeToMultiPolygon(multiShape, factory));
+    const std::unique_ptr<geos::geom::Geometry> joined = multiPolygon->Union();
     return GeometryToMultiShape(joined.get());
 }
 
-static LineArcGeometry::MultiShape DoBoolean(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b, geos::operation::overlay::OverlayOp::OpCode type)
+static LineArcGeometry::MultiShape DoBoolean(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b, const int type)
 {
-    std::unique_ptr<geos::geom::PrecisionModel> pm(new geos::geom::PrecisionModel());
-    GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create(pm.get(), -1));
-    std::unique_ptr<geos::geom::MultiPolygon> aa(MultiShapeToMultiPolygon(a, factory.get()));
-    std::unique_ptr<geos::geom::MultiPolygon> bb(MultiShapeToMultiPolygon(b, factory.get()));
-    geos::operation::overlay::OverlayOp op(aa.get(), bb.get());
-    std::unique_ptr<geos::geom::Geometry> result(op.getResultGeometry(type));
+    const GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create());
+    const std::unique_ptr<geos::geom::MultiPolygon> aa(MultiShapeToMultiPolygon(a, factory));
+    const std::unique_ptr<geos::geom::MultiPolygon> bb(MultiShapeToMultiPolygon(b, factory));
+    geos::operation::overlayng::OverlayNG op(aa.get(), bb.get(), type);
+    const std::unique_ptr<geos::geom::Geometry> result(op.getResult());
     return GeometryToMultiShape(result.get());
 }
 
 LineArcGeometry::MultiShape GeometryOperationsGEOS::join(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     // qDebug() << "GeometryOperationsGEOS::join()";
-    return DoBoolean(a, b, geos::operation::overlay::OverlayOp::OpCode::opUNION);
+    return DoBoolean(a, b, geos::operation::overlayng::OverlayNG::UNION);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsGEOS::intersection(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     // qDebug() << "GeometryOperationsGEOS::intersection()";
-    return DoBoolean(a, b, geos::operation::overlay::OverlayOp::OpCode::opINTERSECTION);
+    return DoBoolean(a, b, geos::operation::overlayng::OverlayNG::INTERSECTION);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsGEOS::difference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     // qDebug() << "GeometryOperationsGEOS::difference()";
-    return DoBoolean(a, b, geos::operation::overlay::OverlayOp::OpCode::opDIFFERENCE);
+    return DoBoolean(a, b, geos::operation::overlayng::OverlayNG::DIFFERENCE);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsGEOS::symmetricDifference(const LineArcGeometry::MultiShape &multiShape)
@@ -93,16 +82,15 @@ LineArcGeometry::MultiShape GeometryOperationsGEOS::symmetricDifference(const Li
 LineArcGeometry::MultiShape GeometryOperationsGEOS::symmetricDifference(const LineArcGeometry::MultiShape &a, const LineArcGeometry::MultiShape &b)
 {
     // qDebug() << "GeometryOperationsGEOS::symmetricDifference()";
-    return DoBoolean(a, b, geos::operation::overlay::OverlayOp::OpCode::opSYMDIFFERENCE);
+    return DoBoolean(a, b, geos::operation::overlayng::OverlayNG::SYMDIFFERENCE);
 }
 
 LineArcGeometry::MultiShape GeometryOperationsGEOS::offset(const LineArcGeometry::MultiShape &multiShape, double radius)
 {
     // qDebug() << "GeometryOperationsGEOS::offset()";
-    std::unique_ptr<geos::geom::PrecisionModel> pm(new geos::geom::PrecisionModel());
-    GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create(pm.get(), -1));
-    std::unique_ptr<geos::geom::MultiPolygon> multiPolygon(MultiShapeToMultiPolygon(multiShape, factory.get()));
-    std::unique_ptr<geos::geom::Geometry> result(geos::operation::buffer::BufferOp::bufferOp(multiPolygon.get(), radius));
+    const GeometryFactoryUniquePtr factory(geos::geom::GeometryFactory::create());
+    const std::unique_ptr<geos::geom::MultiPolygon> multiPolygon(MultiShapeToMultiPolygon(multiShape, factory));
+    const std::unique_ptr<geos::geom::Geometry> result(geos::operation::buffer::BufferOp::bufferOp(multiPolygon.get(), radius));
     return GeometryToMultiShape(result.get());
 }
 

@@ -85,7 +85,7 @@ LineArcGeometry::MultiShape AleksFile_Load(const QString &filePath)
     while (!file.atEnd())
     {
         const QByteArray line = file.readLine().trimmed();
-        const QStringList words = QString(line).split(' ', QString::SkipEmptyParts); // Qt::SkipEmptyParts in later versions of Qt?
+        const QStringList words = QString(line).split(' ', Qt::SkipEmptyParts); // Qt::SkipEmptyParts in later versions of Qt?
         if (words.isEmpty())
             continue;
         // TODO validity checking

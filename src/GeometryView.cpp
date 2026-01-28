@@ -20,7 +20,7 @@ GeometryView::GeometryView(QWidget *parent) : QGraphicsView(parent)
 void GeometryView::mouseMoveEvent(QMouseEvent *event)
 {
     QGraphicsView::mouseMoveEvent(event);
-    emit pointHovered(mapToScene(event->pos()));
+    Q_EMIT pointHovered(mapToScene(event->pos()));
 }
 
 void GeometryView::wheelEvent(QWheelEvent *event)

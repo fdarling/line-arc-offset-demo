@@ -395,10 +395,10 @@ QTreeWidgetItem * MainWindow::_AddMultiShape(const LineArcGeometry::MultiShape &
 
 void MainWindow::_RunTests(GeometryOperations &ops)
 {
-    const LineArcGeometry::MultiShape overlappingShapes = SVG_Load("testcases/traces_01.svg");
-    // const LineArcGeometry::MultiShape overlappingShapes = AleksFile_Load("testcases/input_1_shape.txt");
-    // const LineArcGeometry::MultiShape overlappingShapes = AleksFile_Load("testcases/input_2_shapes.txt");
-    // AleksFile_Save("testcases/output.txt", overlappingShapes);
+    const LineArcGeometry::MultiShape overlappingShapes = SVG_Load("../testcases/traces_01.svg");
+    // const LineArcGeometry::MultiShape overlappingShapes = AleksFile_Load("../testcases/input_1_shape.txt");
+    // const LineArcGeometry::MultiShape overlappingShapes = AleksFile_Load("../testcases/input_2_shapes.txt");
+    // AleksFile_Save("../testcases/output.txt", overlappingShapes);
     enum TestType
     {
         TEST_NONE,
@@ -430,7 +430,7 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     {
         // display the raw geometry imported from the SVG (before any operations are run on it)
         _AddMultiShape(overlappingShapes, "overlapping");
-        // SVG_Save("testcases/output.svg", overlappingShapes);
+        // SVG_Save("../testcases/output.svg", overlappingShapes);
         return;
     }
     if (testType == TEST_IDENTITY)
@@ -439,7 +439,7 @@ void MainWindow::_RunTests(GeometryOperations &ops)
         Uncheck(_AddMultiShape(overlappingShapes, "original"));
         const LineArcGeometry::MultiShape reconverted = ops.identity(overlappingShapes);
         _AddMultiShape(reconverted, "reconverted");
-        // SVG_Save("testcases/output.svg", reconverted);
+        // SVG_Save("../testcases/output.svg", reconverted);
         return;
     }
     // combine the overlapping contents of the test case file using union
@@ -448,38 +448,38 @@ void MainWindow::_RunTests(GeometryOperations &ops)
     {
         Uncheck(_AddMultiShape(overlappingShapes, "overlapping"));
         _AddMultiShape(joined, "unary union");
-        // SVG_Save("testcases/output.svg", joined);
+        // SVG_Save("../testcases/output.svg", joined);
     }
     else if (testType == TEST_UNION)
     {
         // further test union
-        const LineArcGeometry::MultiShape addend = SVG_Load("testcases/traces_02.svg");
+        const LineArcGeometry::MultiShape addend = SVG_Load("../testcases/traces_02.svg");
         Uncheck(_AddMultiShape(joined, "A"));
         Uncheck(_AddMultiShape(addend, "B"));
         const LineArcGeometry::MultiShape sum = ops.join(joined, addend);
         _AddMultiShape(sum, "union");
-        // SVG_Save("testcases/output.svg", sum);
+        // SVG_Save("../testcases/output.svg", sum);
     }
     else if (testType == TEST_INTERSECTION)
     {
         // test intersection
-        const LineArcGeometry::MultiShape conjuct = SVG_Load("testcases/traces_02.svg");
+        const LineArcGeometry::MultiShape conjuct = SVG_Load("../testcases/traces_02.svg");
         Uncheck(_AddMultiShape(joined, "A"));
         Uncheck(_AddMultiShape(conjuct, "B"));
         const LineArcGeometry::MultiShape intersection = ops.intersection(joined, conjuct);
         _AddMultiShape(intersection, "intersection");
-        // SVG_Save("testcases/output.svg", intersection);
+        // SVG_Save("../testcases/output.svg", intersection);
     }
     else if (testType == TEST_DIFFERENCE)
     {
         // test difference
-        // const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/thermal.svg");
-        const LineArcGeometry::MultiShape subtrahend = SVG_Load("testcases/traces_02.svg");
+        // const LineArcGeometry::MultiShape cutter = SVG_Load("../testcases/thermal.svg");
+        const LineArcGeometry::MultiShape subtrahend = SVG_Load("../testcases/traces_02.svg");
         Uncheck(_AddMultiShape(joined, "A"));
         Uncheck(_AddMultiShape(subtrahend, "B"));
         const LineArcGeometry::MultiShape diffed = ops.difference(joined, subtrahend);
         _AddMultiShape(diffed, "difference");
-        // SVG_Save("testcases/output.svg", diffed);
+        // SVG_Save("../testcases/output.svg", diffed);
     }
     else if (testType == TEST_UNARY_XOR)
     {
@@ -487,17 +487,17 @@ void MainWindow::_RunTests(GeometryOperations &ops)
         Uncheck(_AddMultiShape(overlappingShapes, "overlapping", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64)));
         const LineArcGeometry::MultiShape xorResult = ops.symmetricDifference(overlappingShapes);
         _AddMultiShape(xorResult, "xor", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
-        // SVG_Save("testcases/output.svg", xorResult);
+        // SVG_Save("../testcases/output.svg", xorResult);
     }
     else if (testType == TEST_XOR)
     {
         // test boolean xor (symmetric difference)
         Uncheck(_AddMultiShape(joined, "A", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64)));
-        const LineArcGeometry::MultiShape cutter = SVG_Load("testcases/traces_02.svg");
+        const LineArcGeometry::MultiShape cutter = SVG_Load("../testcases/traces_02.svg");
         Uncheck(_AddMultiShape(cutter, "B", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64)));
         const LineArcGeometry::MultiShape xorResult = ops.symmetricDifference(joined, cutter);
         _AddMultiShape(xorResult, "xor", QPen(Qt::blue, 0.0), ColorWithAlpha(Qt::blue, 64));
-        // SVG_Save("testcases/output.svg", xorResult);
+        // SVG_Save("../testcases/output.svg", xorResult);
     }
     else if (testType == TEST_OFFSET)
     {
@@ -538,7 +538,7 @@ void MainWindow::_RunTests(GeometryOperations &ops)
             const QBrush brush = Qt::NoBrush;
             // const QBrush brush = ColorWithAlpha(Qt::green, 64);
             _AddMultiShape(offset_shapes, name, QPen(Qt::green, 0.0), brush);
-            // SVG_Save("testcases/output.svg", offset_shapes);
+            // SVG_Save("../testcases/output.svg", offset_shapes);
             progress.setValue(i+1);
         }
         qDebug() << ("Took " + QString::number(timerTotal.nsecsElapsed()/1.0e9, 'f', 3) + " seconds to generate all the offsets.");

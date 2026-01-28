@@ -2,7 +2,6 @@
 #include "../GeometryQt.h"
 
 #include <geos/version.h>
-#include <geos/geom/CoordinateSequenceFactory.h>
 #include <geos/geom/Geometry.h>
 
 #include <cmath>
@@ -10,13 +9,6 @@
 #include <QDebug>
 
 namespace LineArcOffsetDemo {
-
-#if (GEOS_VERSION_MAJOR <= 3) && (GEOS_VERSION_MINOR <= 7)
-typedef std::vector<geos::geom::Geometry*> HoleVector;
-#else
-typedef std::vector<geos::geom::LinearRing*> HoleVector;
-// typedef const geos::geom::Geometry* GeometryPointer;
-#endif
 
 geos::geom::Coordinate PointToCoordinate(const LineArcGeometry::Point &pt)
 {
@@ -28,63 +20,54 @@ LineArcGeometry::Point CoordinateToPoint(const geos::geom::Coordinate &pt)
     return LineArcGeometry::Point(pt.x, pt.y);
 }
 
-std::unique_ptr<geos::geom::LinearRing> ContourToLinearRing(const LineArcGeometry::Contour &contour, const geos::geom::GeometryFactory *factory)
+std::unique_ptr<geos::geom::LinearRing> ContourToLinearRing(const LineArcGeometry::Contour &contour, const GeometryFactoryUniquePtr &factory)
 {
     const LineArcGeometry::Contour approximated = contour.approximatedArcs();
-    
-    std::vector<geos::geom::Coordinate> * const points = new std::vector<geos::geom::Coordinate>();
+
+    std::unique_ptr<geos::geom::CoordinateSequence> coordinateSequence = std::make_unique<geos::geom::CoordinateSequence>();
     if (!approximated.segments.empty())
-        points->push_back(PointToCoordinate(approximated.segments.front().line.p1));
+        coordinateSequence->add(PointToCoordinate(approximated.segments.front().line.p1));
     for (std::list<LineArcGeometry::Segment>::const_iterator it = approximated.segments.begin(); it != approximated.segments.end(); ++it)
     {
-        points->push_back(PointToCoordinate(it->line.p2));
+        coordinateSequence->add(PointToCoordinate(it->line.p2));
     }
 
-    std::unique_ptr<geos::geom::CoordinateSequence> coordinateSequence(factory->getCoordinateSequenceFactory()->create(points, std::size_t(0)));
-    std::unique_ptr<geos::geom::LinearRing> result(factory->createLinearRing(coordinateSequence.release()));
-    
+    std::unique_ptr<geos::geom::LinearRing> result = factory->createLinearRing(std::move(coordinateSequence));
+
     return result;
 }
 
-std::unique_ptr<geos::geom::Polygon> ShapeToPolygon(const LineArcGeometry::Shape &shape, const geos::geom::GeometryFactory *factory)
+std::unique_ptr<geos::geom::Polygon> ShapeToPolygon(const LineArcGeometry::Shape &shape, const GeometryFactoryUniquePtr &factory)
 {
     // convert the boundary
     std::unique_ptr<geos::geom::LinearRing> boundary(ContourToLinearRing(shape.boundary, factory));
 
-    // possibly convert the holes
-    HoleVector *holes = nullptr;
+    // convert any holes
+    std::vector<std::unique_ptr<geos::geom::LinearRing>> holes;
     if (!shape.holes.empty())
     {
-        holes = new HoleVector();
         for (std::list<LineArcGeometry::Contour>::const_iterator it = shape.holes.begin(); it != shape.holes.end(); ++it)
         {
-            holes->push_back(ContourToLinearRing(*it, factory).release());
+            holes.emplace_back(ContourToLinearRing(*it, factory));
         }
     }
 
     // construct the polygon
-    return std::unique_ptr<geos::geom::Polygon>(factory->createPolygon(boundary.release(), holes));
+    return factory->createPolygon(std::move(boundary), std::move(holes));
 }
 
-std::unique_ptr<geos::geom::MultiPolygon> MultiShapeToMultiPolygon(const LineArcGeometry::MultiShape &multiShape, const geos::geom::GeometryFactory *factory)
+std::unique_ptr<geos::geom::MultiPolygon> MultiShapeToMultiPolygon(const LineArcGeometry::MultiShape &multiShape, const GeometryFactoryUniquePtr &factory)
 {
     // create temporary geometry for constructor argument
-    typedef std::vector<geos::geom::Geometry*> GeometryPointerVector;
-    GeometryPointerVector * const polygons = new GeometryPointerVector(); // TODO make it nullptr if it's going to be empty?
+    typedef std::vector<std::unique_ptr<geos::geom::Geometry>> GeometryPointerVector;
+    GeometryPointerVector polygons;
     for (std::list<LineArcGeometry::Shape>::const_iterator it = multiShape.shapes.begin(); it != multiShape.shapes.end(); ++it)
     {
-        polygons->push_back(ShapeToPolygon(*it, factory).release());
+        polygons.emplace_back(ShapeToPolygon(*it, factory).release());
     }
 
     // construct MultiPolygon
-    std::unique_ptr<geos::geom::MultiPolygon> result(factory->createMultiPolygon(polygons));
-
-    // NOTE: unnecessary since the MultiPolygon took ownership
-    // clean up temporary geometry
-    /*for (std::vector<geos::geom::Geometry*>::iterator it = polygons.begin(); it != polygons.end(); ++it)
-    {
-        delete *it;
-    }*/
+    std::unique_ptr<geos::geom::MultiPolygon> result = factory->createMultiPolygon(std::move(polygons));
 
     // return constructed object
     return result;
@@ -129,10 +112,36 @@ LineArcGeometry::MultiShape MultiPolygonToMultiShape(const geos::geom::MultiPoly
     for (std::size_t i = 0; i < multiPolygon->getNumGeometries(); i++)
     {
         const geos::geom::Geometry * const geometry = multiPolygon->getGeometryN(i);
-        const geos::geom::Polygon * const polygon = dynamic_cast<const geos::geom::Polygon*>(geometry);
-        if (polygon)
+        const geos::geom::GeometryTypeId type = geometry->getGeometryTypeId();
+        if (type == geos::geom::GEOS_POLYGON)
         {
-            result.shapes.push_back(LineArcGeometry::Shape(PolygonToShape(polygon)));
+            const geos::geom::Polygon * const polygon = dynamic_cast<const geos::geom::Polygon*>(geometry);
+            result.shapes.push_back(PolygonToShape(polygon));
+        }
+        else
+        {
+            qDebug() << "WARNING: MultiPolygonToMultiShape() called on unhandled type:" << geometry->getGeometryType().c_str();
+        }
+    }
+    return result;
+}
+
+LineArcGeometry::MultiShape GeometryCollectionToMultiShape(const geos::geom::GeometryCollection *geometryCollection)
+{
+    LineArcGeometry::MultiShape result;
+    for (std::size_t i = 0; i < geometryCollection->getNumGeometries(); i++)
+    {
+        const geos::geom::Geometry * const geometry = geometryCollection->getGeometryN(i);
+        const geos::geom::GeometryTypeId type = geometry->getGeometryTypeId();
+        qDebug() << "GeometryCollectionToMultiShape() " << geometry->getGeometryType().c_str();
+        if (type == geos::geom::GEOS_POLYGON)
+        {
+            const geos::geom::Polygon * const polygon = dynamic_cast<const geos::geom::Polygon*>(geometry);
+            result.shapes.push_back(PolygonToShape(polygon));
+        }
+        else
+        {
+            qDebug() << "WARNING: GeometryCollectionToMultiShape() called on unhandled type:" << geometry->getGeometryType().c_str();
         }
     }
     return result;
@@ -151,6 +160,11 @@ LineArcGeometry::MultiShape GeometryToMultiShape(const geos::geom::Geometry *geo
     {
         const geos::geom::MultiPolygon * const multiPolygon = dynamic_cast<const geos::geom::MultiPolygon*>(geometry);
         result = MultiPolygonToMultiShape(multiPolygon);
+    }
+    else if (type == geos::geom::GEOS_GEOMETRYCOLLECTION)
+    {
+        const geos::geom::GeometryCollection * const geometryCollection = dynamic_cast<const geos::geom::GeometryCollection*>(geometry);
+        result = GeometryCollectionToMultiShape(geometryCollection);
     }
     else
     {

@@ -10,7 +10,7 @@ class GeometryView : public QGraphicsView
     Q_OBJECT
 public:
     GeometryView(QWidget *parent = nullptr);
-signals:
+Q_SIGNALS:
     void pointHovered(const QPointF &);
 protected:
     void mouseMoveEvent(QMouseEvent *event);
