@@ -20,6 +20,9 @@
 #ifdef USING_CLIPPER
 #include "clipper/GeometryOperationsClipper.h"
 #endif // USING_CLIPPER
+#ifdef USING_CLIPPER2
+#include "clipper2/GeometryOperationsClipper2.h"
+#endif // USING_CLIPPER2
 #ifdef USING_BOOST
 #include "boost/GeometryOperationsBoost.h"
 #endif // USING_BOOST
@@ -158,6 +161,9 @@ MainWindow::MainWindow(QWidget *parent) :
 #endif // USING_CAVC
 #ifdef USING_CLIPPER
     engineConstructors.append(EngineNameConstructorPair("clipper", []() {return new GeometryOperationsClipper();}));
+#endif // USING_CLIPPER
+#ifdef USING_CLIPPER2
+    engineConstructors.append(EngineNameConstructorPair("clipper2", []() {return new GeometryOperationsClipper2();}));
 #endif // USING_CLIPPER
 #ifdef USING_BOOST
     engineConstructors.append(EngineNameConstructorPair("boost", []() {return new GeometryOperationsBoost();}));

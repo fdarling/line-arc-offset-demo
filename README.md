@@ -1,10 +1,10 @@
 # LineArcOffsetDemo
 
-A demo program written with C++/Qt to show offsetting of shapes comprised of line and arc segments. It also can do boolean operations on these shapes.
+A demo program written with C++/Qt to show offsetting of shapes comprised of line and arc segments. It also can perform boolean operations on these shapes.
 
-It currently has two backends supporting arc segments: CGAL (used by OpenSCAD), and Open CASCADE (used by FreeCAD).
+It currently has three backends that natively support arc segments: CGAL (used by OpenSCAD), and Open CASCADE (used by FreeCAD), and CavalierContours (lesser known, mostly abandoned for a Rust rewrite).
 
-And three backends that approximate arcs with line segments: Clipper, Boost, and GEOS.
+There are five backends that approximate arcs with line segments: Clipper, Clipper2, Boost, and GEOS.
 
 ## Screenshots
 
@@ -16,105 +16,54 @@ And three backends that approximate arcs with line segments: Clipper, Boost, and
 
 Mandatory dependencies:
 
-* [Qt](https://www.qt.io/) 5 (widgets and xml modules)
+* [CMake](https://cmake.org/) v3.31 (v3.13+ required)
+* [Qt](https://www.qt.io/) v5.15 (widgets and xml modules)
 
 Optional dependencies for different engines:
 
-* [CGAL](https://www.cgal.org/) 4.11.2
-* [Open CASCADE Technology](https://www.opencascade.com/content/latest-release) 7.4.0
-* [Open CASCADE Community Edition](https://github.com/tpaviot/oce) 0.18.2 (forked from Open CASCADE Technology 6.9.0)
-* [Clipper](http://www.angusj.com/delphi/clipper.php) 6.4.2
-* [Boost](https://www.boost.org/) 1.65.1
-* [GEOS](https://trac.osgeo.org/geos) 3.6.2
+* [CGAL](https://www.cgal.org/) v6.0.1
+* [Open CASCADE Technology](https://dev.opencascade.org/release) v7.8.1
+* [CavalierContours](https://github.com/jbuckmccready/CavalierContours) CavalierContours (included as git sub-module)
+* [Clipper](http://www.angusj.com/delphi/clipper.php) v6.4.2
+* [Clipper2](https://www.angusj.com/clipper2/Docs/Overview.htm) v2.0.1 (included via CMake FetchContent)
+* [Boost](https://www.boost.org/) v1.83.0
+* [GEOS](https://trac.osgeo.org/geos) v3.13.1
 
 NOTE: the version numbers are for reference, other versions may work too.
 
-The relevant development packages to install on Ubuntu 18.04 (bionic) are:
+The relevant development packages to install on Debian 13 (trixie) are:
 
-* `qt5-default`
+* `qtbase5-dev`
 * `libcgal-dev`
 * `libocct-modeling-algorithms-dev` and `libocct-modeling-data-dev` and `libocct-data-exchange-dev`
-* `liboce-modeling-dev`
 * `libpolyclipping-dev`
 * `libboost-dev`
 * `libgeos++-dev`
 
-NOTE: libocct is only available on newer Debian/Ubuntu distributions, so you'll either have to use liboce instead, or compile/install OCCT manually (see the instructions further down).
-
-## Open CACADE Technology (OCCT) vs. Open CASCADE Community Edition (OCE)
-
-Open CASCADE Technology was forked at version 6.9.0 into a "Community Edition" that has a different version number scheme. The motivation was to more actively integrate user submitted patches. FreeCAD uses OCE and not official OCCT, and Debian/Ubuntu provide packages for OCE but not OCCT, making it more convenient to install.
-
-https://en.wikipedia.org/wiki/Open_Cascade_Technology#Community_fork
-
-## Building Open CASCADE Technology
-
-Official Open CASCADE Technology (not the Community Edition) packages are not available in Ubuntu's package repositories. You must instead compile it from the source.
-
-For Debian 9 (stretch) and likely Ubuntu 18.04 (bionic), the following dependencies need to be installed to build Open CACADE 7.4.0:
-
-```
-sudo apt-get install cmake tk-dev libxmu-dev libxi-dev
-```
-
-The official website (linked earlier) wants you to log in with an account before allowing you to download any files. There is however a GitHub mirror with the sourcecode packages: https://github.com/tpaviot/oce/releases
-
-Here are example commands for downloading, unpacking, compiling, and installing Open CASCADE 7.4.0:
-
-```
-cd ~/Downloads
-wget -c https://github.com/tpaviot/oce/releases/download/official-upstream-packages/opencascade-7.4.0.tgz
-tar xf opencascade-7.4.0.tgz
-cd opencascade-7.4.0
-mkdir build
-cd build
-cmake ..
-make
-make install
-```
-
-## Configuring
-
-You will want to edit the `linearcoffsetdemo.pro` file and choose which goemetry backends to use by commenting or uncommenting the appropriate lines. It is fine to have multiple engines enabled at the same time, the active engine can be chosen by passing the `--engine` command line option with the appropriate engine name.
-
-This example shows using only OCE:
-
-```
-# GEOMETRY_ENGINES += cgal
-# GEOMETRY_ENGINES += occt
-GEOMETRY_ENGINES += oce
-# GEOMETRY_ENGINES += clipper
-# GEOMETRY_ENGINES += boost
-# GEOMETRY_ENGINES += geos
-```
-
-This example shows using both CGAL and GEOS:
-
-```
-GEOMETRY_ENGINES += cgal
-# GEOMETRY_ENGINES += occt
-# GEOMETRY_ENGINES += oce
-# GEOMETRY_ENGINES += clipper
-# GEOMETRY_ENGINES += boost
-GEOMETRY_ENGINES += geos
-```
-
-NOTE: both OCCT and OCE can be enabled at the same time, but only OCCT will actually be used (it overrides the other).
-
-You may also need to modify the appropriate `LIBS` and `QXX_CFLAGS` lines for CGAL and OCCT/OCE depending on your platform.
-
 ## Compiling
 
-On Linux, run the following commands in the top-level directory with the `linearcoffsetdemo.pro` file:
+Run the following commands in the top-level directory with the `CMakeLists.txt` file:
 
 ```
-qmake
-make
+mkdir build
+cd build
+cmake .. -DUSE_GEOS=ON
+cmake --build .
 ```
+
+You can add one or more `-DUSE_xxx=ON` to enable various engines as backends:
+
+* `-DUSE_CGAL=ON` for CGAL
+* `-DUSE_OCCT=ON` for OpenCASCADE
+* `-DUSE_CAVC=ON` for CavalierContours
+* `-DUSE_CLIPPER=ON` for Clipper
+* `-DUSE_CLIPPER2=ON` for Clipper2
+* `-DUSE_BOOST=ON` for Boost
+* `-DUSE_GEOS=ON` for GEOS
 
 ## Running
 
-On Linux, you can launch the built `LineArcOffsetDemo` executable that will be put in the same directory as the `linearcoffsetdemo.pro` file:
+You can launch the built `LineArcOffsetDemo` executable that will be put in the build directory:
 
 ```
 ./LineArcOffsetDemo
@@ -125,3 +74,13 @@ An example of manually specifying the engine to use (useful if multiple engines 
 ```
 ./LineArcOffsetDemo --engine geos
 ```
+
+Here are the various options:
+
+* `--engine cgal` for CGAL
+* `--engine occt` for OpenCASCADE
+* `--engine cavc` for CavalierContours
+* `--engine clipper` for Clipper
+* `--engine clipper2` for Clipper2
+* `--engine boost` for Boost
+* `--engine geos` for GEOS

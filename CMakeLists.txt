@@ -13,9 +13,9 @@ find_package(Qt5 COMPONENTS Widgets Xml REQUIRED)
 
 option(USE_CGAL "Enable CGAL Engine" OFF)
 option(USE_OCCT "Enable OpenCASCADE Engine" OFF)
-option(USE_OCE "Enable OpenCASCADE Engine" OFF)
 option(USE_CAVC "Enable CavalierContours Engine" OFF)
 option(USE_CLIPPER "Enable Clipper Engine" OFF)
+option(USE_CLIPPER2 "Enable Clipper2 Engine" OFF)
 option(USE_BOOST "Enable Boost Engine" OFF)
 option(USE_GEOS "Enable GEOS Engine" OFF)
 
@@ -72,6 +72,24 @@ if(USE_CLIPPER)
     )
 endif()
 
+if(USE_CLIPPER2)
+    include(FetchContent)
+    FetchContent_Declare(
+        Clipper2
+        GIT_REPOSITORY https://github.com/AngusJohnson/Clipper2.git
+        GIT_TAG main
+    )
+    FetchContent_MakeAvailable(Clipper2)
+    add_compile_definitions(USING_CLIPPER2)
+    set(CLIPPER2_SOURCES
+        src/clipper2/GeometryClipper2.cpp
+		src/clipper2/GeometryOperationsClipper2.cpp
+        ${clipper2_SOURCE_DIR}/CPP/Clipper2Lib/src/clipper.engine.cpp
+        ${clipper2_SOURCE_DIR}/CPP/Clipper2Lib/src/clipper.offset.cpp
+        ${clipper2_SOURCE_DIR}/CPP/Clipper2Lib/src/clipper.rectclip.cpp
+    )
+endif()
+
 if(USE_BOOST)
     find_package(Boost REQUIRED)
     add_compile_definitions(USING_BOOST)
@@ -99,6 +117,7 @@ add_compile_definitions(
 include_directories(
     $<$<BOOL:${USE_CAVC}>:deps/CavalierContours/include>
     $<$<BOOL:${USE_CLIPPER}>:${POLYCLIPPER_INCLUDE_DIRS}>
+    $<$<BOOL:${USE_CLIPPER2}>:${clipper2_SOURCE_DIR}/CPP/Clipper2Lib/include>
 )
 
 add_executable(${PROJECT_NAME}
@@ -113,6 +132,7 @@ add_executable(${PROJECT_NAME}
     $<$<BOOL:${USE_OCCT}>:${OCCT_SOURCES}>
     $<$<BOOL:${USE_CAVC}>:${CAVC_SOURCES}>
     $<$<BOOL:${USE_CLIPPER}>:${CLIPPER_SOURCES}>
+    $<$<BOOL:${USE_CLIPPER2}>:${CLIPPER2_SOURCES}>
     $<$<BOOL:${USE_BOOST}>:${BOOST_SOURCES}>
     $<$<BOOL:${USE_GEOS}>:${GEOS_SOURCES}>
 	src/Actions.cpp
