@@ -97,7 +97,7 @@ LineArcGeometry::MultiShape GeometryOperationsClipper2::offset(const LineArcGeom
         return multiShape;
     Clipper2Lib::PolyTree64 offsetPolyTree;
     {
-        const Clipper2Lib::Paths paths = MultiShapeToPaths64(multiShape);
+        const Clipper2Lib::Paths64 paths = MultiShapeToPaths64(multiShape);
         Clipper2Lib::ClipperOffset offsetter;
         offsetter.AddPaths(paths, Clipper2Lib::JoinType::Round, Clipper2Lib::EndType::Polygon);
         offsetter.Execute(delta, offsetPolyTree);
